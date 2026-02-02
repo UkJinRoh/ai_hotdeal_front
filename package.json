@@ -15,12 +15,15 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "sass": "^1.97.3"
+    "sass": "^1.97.3",
+    "styled-components": "^6.3.8",
+    "swiper": "^12.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/styled-components": "^5.1.36",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "typescript": "^5"

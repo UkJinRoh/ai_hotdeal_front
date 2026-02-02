@@ -2,71 +2,122 @@
 
 import { supabase } from '@/lib/supabase';
 
+// Helper to filter out community links that might have slipped through
+function isValidLink(link: string) {
+    if (!link) return false;
+
+    // 커뮤니티 도메인 필터링
+    const communityDomains = [
+        'ppomppu.co.kr',
+        'fmkorea.com',
+        'quasarzone.com',
+        'arca.live',
+        'coolenjoy.net',
+        'ruliweb.com'
+    ];
+    return !communityDomains.some(domain => link.includes(domain));
+}
+
+// Helper to remove duplicates by title
+function removeDuplicatesByTitle(items: any[]) {
+    const uniqueItems = [];
+    const seenTitles = new Set();
+
+    for (const item of items) {
+        // Trim and check for exact match
+        const title = item.title?.trim();
+        if (title && !seenTitles.has(title)) {
+            seenTitles.add(title);
+            uniqueItems.push(item);
+        }
+    }
+    return uniqueItems;
+}
+
 // 1~5. Category Top 10
 export async function getCategoryTop10(category: string) {
-    // Assuming 'votes', 'comment_count' or just 'score' determines TOP.
-    // Using 'score' desc as a default metric for ranking.
+    // Logic: Score > Votes (Recommendations) > Comment Count
     const { data, error } = await supabase
         .from('hotdeals')
         .select('*')
         .eq('category', category)
         .order('score', { ascending: false })
-        .limit(10);
+        .order('votes', { ascending: false })
+        .order('comment_count', { ascending: false })
+        .limit(50); // Fetch more to allow for filtering
 
-    if (error) throw error;
-    return data;
+    if (error) {
+        console.error(`Error fetching ${category}:`, error);
+        throw error;
+    }
+
+    console.log(`[actions] Category: ${category}, Fetched: ${data?.length}`);
+
+    // Filter invalid links
+    let filteredData = data.filter(item => isValidLink(item.link || item.url));
+
+    // Filter duplicates
+    filteredData = removeDuplicatesByTitle(filteredData);
+
+    return filteredData.slice(0, 10);
 }
 
 // 6. Overall Top 10
 export async function getOverallTop10() {
-    // Logic: "Comprehensive judgment (comments, recommendations), compare all dates"
-    // Using 'votes' + 'comment_count' if 'score' isn't sufficient, but inspecting the schema showed 'score'.
-    // Let's use 'score' for simplicity unless user asked for custom formula.
-    // User asked: "(comprehensive judgment (comment count, recommendation count), all date data comparison)"
-    // The 'score' column likely already aggregates this, but let's be explicit if needed.
-    // For now, sorting by 'score' desc seems safest as it likely combines them.
-    // If we want raw calculation: order by (votes + comment_count)
-
-    // Let's try to order by score first as it exists in DB.
+    // Logic: Score > Votes (Recommendations) > Comment Count
     const { data, error } = await supabase
         .from('hotdeals')
         .select('*')
         .order('score', { ascending: false })
-        .limit(10);
+        .order('votes', { ascending: false })
+        .order('comment_count', { ascending: false })
+        .limit(50);
 
     if (error) throw error;
-    return data;
+
+    // Filter invalid links
+    let filteredData = data.filter(item => isValidLink(item.link || item.url));
+
+    // Filter duplicates
+    filteredData = removeDuplicatesByTitle(filteredData);
+
+    return filteredData.slice(0, 10);
 }
 
 // 7. Date-wise Popularity (Hotdeals by Date)
-export async function getDatePopularity() {
-    // "Date-wise hotdeal popularity"
-    // This likely means grouping by date or showing latest popular ones.
-    // For a single list, "Popularity by Date" could mean:
-    // Sort by 'created_at' desc (recent) AND 'score' desc within that?
-    // Or just recent high scores.
-    // Let's interpret as: Most recent 50 items sorted by score?
-    // Or: Top 10 for TODAY?
-    // Given "Date-wise", let's return the Top 10 items from the last 24 hours (or recent).
-    // Or simply detailed list sorted by Date then Score.
-    // Let's implement: Sort by `created_at` DESC then `score` DESC.
-    // Wait, user said "Date-wise hot deal popularity order". 
-    // Maybe "For each date, show top deals"? That's complex for a single button returning list.
-    // Let's assume: Sort by created_at DESC (primary) to show flow of deals? 
-    // OR: Group by Date?
-    // Re-reading: "Date-wise Hotdeal Popularity" -> commonly means "Trending now" or "Calendar view".
-    // Let's return the most recent 100 items sorted by created_at.
-    // Actually, "Popularity" implies score.
-    // Let's try: Get Top 10 for the latest available date in DB.
+export async function getDatePopularity(page: number = 1, limit: number = 20, sort: 'latest' | 'oldest' | 'popular' = 'latest') {
+    // console.log(`[getDatePopularity] Page: ${page}, Limit: ${limit}, Sort: ${sort}`);
+    const from = (page - 1) * limit;
+    // Fetch significantly more to account for dupes and invalid links
+    const fetchLimit = Math.ceil(limit * 2.5);
+    const fetchTo = from + fetchLimit - 1;
 
-    // Simplified interpretation: Recent High Scoring Deals.
-    const { data, error } = await supabase
-        .from('hotdeals')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .order('score', { ascending: false })
-        .limit(20);
+    let query;
+    const baseQuery = supabase.from('hotdeals').select('*');
+
+    if (sort === 'oldest') {
+        query = baseQuery.order('created_at', { ascending: true });
+    } else if (sort === 'popular') {
+        // Logic: Score > Votes > Comment Count
+        query = baseQuery
+            .order('score', { ascending: false })
+            .order('votes', { ascending: false })
+            .order('comment_count', { ascending: false });
+    } else {
+        // Default: latest
+        query = baseQuery.order('created_at', { ascending: false });
+    }
+
+    const { data, error } = await query.range(from, fetchTo);
 
     if (error) throw error;
-    return data;
+
+    // Filter invalid links
+    let filteredData = data?.filter(item => isValidLink(item.link || item.url)) || [];
+
+    // Filter duplicates
+    filteredData = removeDuplicatesByTitle(filteredData);
+
+    // Return requested amount
+    return filteredData.slice(0, limit);
 }
