@@ -1,12 +1,26 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
+import { incrementReportCount } from '@/app/actions';
+import CustomAlert from './CustomAlert';
 import styled from 'styled-components';
+import { addReportedItem, isItemReported } from '@/utils/storage';
 
 interface TotalCardProps {
     item: any;
 }
 
 export default function TotalCard({ item }: TotalCardProps) {
+    const [isReported, setIsReported] = useState(false);
+    const [alertMessage, setAlertMessage] = useState<string | null>(null);
+    const reportLockRef = useRef(false);
+
+    useEffect(() => {
+        if (isItemReported(item.id)) {
+            setIsReported(true);
+        }
+    }, [item.id]);
+
     const getPlatformIcon = (link: string) => {
         if (!link) return null;
         if (link.includes('naver')) return '/icons/naver.png';
@@ -22,38 +36,110 @@ export default function TotalCard({ item }: TotalCardProps) {
 
     const iconSrc = getPlatformIcon(item.link || item.url);
 
+    const handleReport = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        if (reportLockRef.current || isReported) return;
+        reportLockRef.current = true;
+
+        setAlertMessage('신고가 접수되었습니다. 감사합니다.');
+
+        setIsReported(true);
+        addReportedItem(item.id);
+
+        try {
+            await incrementReportCount(item.id);
+        } catch (error) {
+            console.error("Report failed:", error);
+        }
+    };
+
     return (
-        <Item
-            href={item.link || item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            <PlatformIconWrapper>
-                {iconSrc && <PlatformIcon src={iconSrc} alt="store image" />}
-            </PlatformIconWrapper>
-            <ItemContent>
-                <ItemTitle>{item.title}</ItemTitle>
-                <ItemPrice>
-                    <p>{item.discount_price ? `${parseInt(item.discount_price).toLocaleString()}원` : '가격 정보 없음'}</p>
-                    <SavingsText>
-                        정가 대비 {item.savings ? `${parseInt(item.savings).toLocaleString()}원 ↓` : '가격 정보 없음'}
-                    </SavingsText>
-                </ItemPrice>
-                <ItemInfo>
-                    <p>추천수 {item.votes}</p>
-                    <p>댓글수 {item.comment_count}</p>
-                </ItemInfo>
-            </ItemContent>
-            <AIContent>
-                <AIContentTitle>AI 분석 🦾</AIContentTitle>
-                <AIContentBody>
-                    <p>• 점수 : {item.score}점/10점</p>
-                    <p>• 추천 : {item.ai_summary}</p>
-                </AIContentBody>
-            </AIContent>
-        </Item>
+        <>
+            {alertMessage && <CustomAlert message={alertMessage} onClose={() => setAlertMessage(null)} />}
+            <CardWrapper $isReported={isReported}>
+                <Item
+                    href={isReported ? undefined : (item.link || item.url)}
+                    as={isReported ? 'div' : 'a'}
+                    target={isReported ? undefined : "_blank"}
+                    rel={isReported ? undefined : "noopener noreferrer"}
+                    onClick={(e: React.MouseEvent) => isReported && e.preventDefault()}
+                >
+                    <PlatformIconWrapper>
+                        {iconSrc && <PlatformIcon src={iconSrc} alt="store image" />}
+                    </PlatformIconWrapper>
+                    <ItemContent>
+                        <ItemTitle>{item.title}</ItemTitle>
+                        <ItemPrice>
+                            <p>{item.discount_price ? `${parseInt(item.discount_price).toLocaleString()}원` : '가격 정보 없음'}</p>
+                            <SavingsText>
+                                정가 대비 {item.savings ? `${parseInt(item.savings).toLocaleString()}원 ↓` : '가격 정보 없음'}
+                            </SavingsText>
+                        </ItemPrice>
+                        <ItemInfo>
+                            <p>추천수 {item.votes}</p>
+                            <p>댓글수 {item.comment_count}</p>
+                        </ItemInfo>
+                    </ItemContent>
+                    <AIContent>
+                        <AIContentTitle>AI 분석 🦾</AIContentTitle>
+                        <AIContentBody>
+                            <p>• 점수 : {item.score}점/10점</p>
+                            <p>• 추천 : {item.ai_summary}</p>
+                        </AIContentBody>
+                    </AIContent>
+
+                    {isReported && (
+                        <ReportedOverlay>
+                            <span>신고됨</span>
+                        </ReportedOverlay>
+                    )}
+                </Item>
+                {!isReported && (
+                    <ReportButton onClick={handleReport}>
+                        변동/종료 신고
+                    </ReportButton>
+                )}
+            </CardWrapper>
+        </>
     );
 }
+
+const CardWrapper = styled.div<{ $isReported?: boolean }>`
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    gap: 8px;
+
+    ${props => props.$isReported && `
+        opacity: 0.6;
+        pointer-events: none;
+        filter: grayscale(100%);
+    `}
+`;
+
+const ReportButton = styled.button`
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+    align-self: flex-end; 
+    padding: 4px 0;
+    opacity: 0.8;
+    transition: all 0.2s ease-in-out;
+    
+    &:hover {
+        text-decoration: underline;
+        color: #fff;
+    }
+
+    @media (max-width: 768px) {
+        font-size: 8px;
+    }
+`;
 
 const Item = styled.a`
     display: flex;
@@ -70,10 +156,35 @@ const Item = styled.a`
     text-decoration: none;
     color: inherit;
     transition: transform 0.2s, box-shadow 0.2s;
+    position: relative; 
     
     &:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+`;
+
+const ReportedOverlay = styled.div`
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    z-index: 20;
+    
+    span {
+        color: #fff;
+        font-weight: 500;
+        font-size: 18px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        border: 2px solid #fff;
+        padding: 8px 16px;
+        border-radius: 8px;
     }
 `;
 

@@ -1,9 +1,12 @@
 'use client';
 
-import styled from 'styled-components';
-import { useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { incrementReportCount } from '@/app/actions';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
+import { addReportedItem, isItemReported } from '@/utils/storage';
+import CustomAlert from './CustomAlert';
+import styled from 'styled-components';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -13,20 +16,9 @@ interface AllCardProps {
     items: any[];
 }
 
-export default function AllCard({ items }: AllCardProps) {
-    const getPlatformIcon = (link: string) => {
-        if (!link) return null;
-        if (link.includes('naver')) return '/icons/naver.png';
-        if (link.includes('auction')) return '/icons/auction.png';
-        if (link.includes('11st')) return '/icons/11st.png';
-        if (link.includes('coupang')) return '/icons/coupang.png';
-        if (link.includes('gmarket')) return '/icons/gmarket.png';
-        if (link.includes('lotte')) return '/icons/lotte.png';
-        if (link.includes('toss')) return '/icons/toss.png';
-        if (link.includes('ohou')) return '/icons/ohouse.png';
-        return null;
-    };
 
+
+export default function AllCard({ items }: AllCardProps) {
     return (
         <Container>
             <SubTitle>전체 베스트 TOP 10</SubTitle>
@@ -42,62 +34,113 @@ export default function AllCard({ items }: AllCardProps) {
                         resistance={true}
                         resistanceRatio={0.5}
                         breakpoints={{
-                            640: {
-                                slidesPerView: 2.2,
-                            },
-                            768: {
-                                slidesPerView: 3.2,
-                            },
-                            1024: {
-                                slidesPerView: 3.8,
-                            },
+                            640: { slidesPerView: 2.2 },
+                            768: { slidesPerView: 3.2 },
+                            1024: { slidesPerView: 3.8 },
                         }}
                     >
-                        {items.map((item, index) => {
-                            const iconSrc = getPlatformIcon(item.link || item.url);
-                            return (
-                                <SwiperSlide key={item.id}>
-                                    <Item
-                                        href={item.link || item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        <PlatformIconWrapper>
-                                            <RankBadge className={`rank-${index + 1}`}>
-                                                {index + 1}
-                                            </RankBadge>
-                                            {iconSrc && <PlatformIcon src={iconSrc} alt="store image" />}
-                                        </PlatformIconWrapper>
-                                        <ItemContent>
-                                            <ItemTitle>{item.title}</ItemTitle>
-                                            <ItemPrice>
-                                                <p>{item.discount_price ? `${parseInt(item.discount_price).toLocaleString()}원` : '가격 정보 없음'}</p>
-                                                <SavingsText>
-                                                    정가 대비 {item.savings ? `${parseInt(item.savings).toLocaleString()}원 ↓` : '가격 정보 없음'}
-                                                </SavingsText>
-                                            </ItemPrice>
-                                            <ItemInfo>
-                                                <p>추천수 {item.votes}</p>
-                                                <p>댓글수 {item.comment_count}</p>
-                                            </ItemInfo>
-                                        </ItemContent>
-                                        <AIContent>
-                                            <AIContentTitle>AI 분석 🦾</AIContentTitle>
-                                            <AIContentBody>
-                                                <p>• 점수 : {item.score}점/10점</p>
-                                                <p>• 추천 : {item.ai_summary}</p>
-                                            </AIContentBody>
-                                        </AIContent>
-                                    </Item>
-                                </SwiperSlide>
-                            );
-                        })}
+                        {items.map((item, index) => (
+                            <SwiperSlide key={item.id}>
+                                <AllCardItem item={item} index={index} />
+                            </SwiperSlide>
+                        ))}
                     </Swiper>
                 ) : (
                     <EmptyState>아이템이 없습니다.</EmptyState>
                 )}
             </SwiperContainer>
         </Container>
+    );
+}
+
+function AllCardItem({ item, index }: { item: any, index: number }) {
+    const [isReported, setIsReported] = useState(false);
+    const [alertMessage, setAlertMessage] = useState<string | null>(null);
+    const reportLockRef = useRef(false);
+
+    useEffect(() => {
+        if (isItemReported(item.id)) {
+            setIsReported(true);
+        }
+    }, [item.id]);
+
+    const getPlatformIcon = (link: string) => {
+        if (!link) return null;
+        if (link.includes('naver')) return '/icons/naver.png';
+        if (link.includes('auction')) return '/icons/auction.png';
+        if (link.includes('11st')) return '/icons/11st.png';
+        if (link.includes('coupang')) return '/icons/coupang.png';
+        if (link.includes('gmarket')) return '/icons/gmarket.png';
+        if (link.includes('lotte')) return '/icons/lotte.png';
+        if (link.includes('toss')) return '/icons/toss.png';
+        if (link.includes('ohou')) return '/icons/ohouse.png';
+        return null;
+    };
+
+    const iconSrc = getPlatformIcon(item.link || item.url);
+
+    const handleReport = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (reportLockRef.current || isReported) return;
+        reportLockRef.current = true;
+        setAlertMessage('신고가 접수되었습니다. 감사합니다.');
+        setIsReported(true);
+        addReportedItem(item.id);
+
+        try {
+            await incrementReportCount(item.id);
+        } catch (error) {
+            console.error("Report failed:", error);
+        }
+    };
+
+    if (isReported) {
+        if (alertMessage) return <CustomAlert message={alertMessage} onClose={() => setAlertMessage(null)} />;
+        return null;
+    }
+
+    return (
+        <>
+            {alertMessage && <CustomAlert message={alertMessage} onClose={() => setAlertMessage(null)} />}
+            <CardWrapper>
+                <Item
+                    href={item.link || item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <PlatformIconWrapper>
+                        <RankBadge className={`rank-${index + 1}`}>
+                            {index + 1}
+                        </RankBadge>
+                        {iconSrc && <PlatformIcon src={iconSrc} alt="store image" />}
+                    </PlatformIconWrapper>
+                    <ItemContent>
+                        <ItemTitle>{item.title}</ItemTitle>
+                        <ItemPrice>
+                            <p>{item.discount_price ? `${parseInt(item.discount_price).toLocaleString()}원` : '가격 정보 없음'}</p>
+                            <SavingsText>
+                                정가 대비 {item.savings ? `${parseInt(item.savings).toLocaleString()}원 ↓` : '가격 정보 없음'}
+                            </SavingsText>
+                        </ItemPrice>
+                        <ItemInfo>
+                            <p>추천수 {item.votes}</p>
+                            <p>댓글수 {item.comment_count}</p>
+                        </ItemInfo>
+                    </ItemContent>
+                    <AIContent>
+                        <AIContentTitle>AI 분석 🦾</AIContentTitle>
+                        <AIContentBody>
+                            <p>• 점수 : {item.score}점/10점</p>
+                            <p>• 추천 : {item.ai_summary}</p>
+                        </AIContentBody>
+                    </AIContent>
+                </Item>
+                <ReportButton onClick={handleReport}>
+                    변동/종료 신고
+                </ReportButton>
+            </CardWrapper>
+        </>
     );
 }
 
@@ -131,20 +174,50 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-//   padding: 20px;
   background-color: var(--background);
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   width: 100%;
-//   border: 1.5px solid #2e2e2e; 
 `;
 
 const SwiperContainer = styled.div`
     width: 100%;
     overflow: hidden;
+    padding-bottom: 20px; 
     
     .swiper-slide {
         height: auto;
+    }
+`;
+
+const CardWrapper = styled.div<{ $isReported?: boolean }>`
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    gap: 8px;
+
+    ${props => props.$isReported && `
+        opacity: 0.6;
+        pointer-events: none;
+        filter: grayscale(100%);
+    `}
+`;
+
+const ReportButton = styled.button`
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+    align-self: flex-end;
+    padding: 4px 0;
+    opacity: 0.8;
+    transition: all 0.2s ease-in-out;
+    
+    &:hover {
+        text-decoration: underline;
+        color: #fff;
     }
 `;
 
@@ -163,6 +236,31 @@ const Item = styled.a`
     text-decoration: none;
     color: inherit;
     transition: transform 0.2s, box-shadow 0.2s;
+    position: relative; 
+`;
+
+const ReportedOverlay = styled.div`
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    z-index: 20;
+    
+    span {
+        color: #fff;
+        font-weight: 500;
+        font-size: 18px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        border: 2px solid #fff;
+        padding: 8px 16px;
+        border-radius: 8px;
+    }
 `;
 
 const PlatformIconWrapper = styled.div`
@@ -194,18 +292,18 @@ const RankBadge = styled.div`
     z-index: 10;
     
     &.rank-1 {
-        background-color: #FFD700; /* Gold */
+        background-color: #FFD700; 
         color: #333;
         height: 50px;
         font-size: 22px;
     }
     &.rank-2 {
-        background-color: #C0C0C0; /* Silver */
+        background-color: #C0C0C0; 
         color: #333;
         height: 45px;
     }
     &.rank-3 {
-        background-color: #CD7F32; /* Bronze */
+        background-color: #CD7F32; 
         height: 45px;
     }
 `;

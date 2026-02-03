@@ -92,7 +92,6 @@ const TabList = styled.div`
     overflow-x: auto;
     padding-bottom: 4px;
     
-    /* Hide scrollbar for clean look */
     -ms-overflow-style: none;
     scrollbar-width: none;
     &::-webkit-scrollbar {
@@ -113,7 +112,8 @@ const TabButton = styled.button<{ $active: boolean }>`
     transition: all 0.2s;
 
     &:hover {
-        background-color: ${props => props.$active ? '#006239' : '#f5f5f5'};
+        border-color: #00c853;
+        color: #fff;
     }
 `;
 

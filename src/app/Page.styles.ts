@@ -36,7 +36,8 @@ export const Main = styled.main`
   flex-direction: column;
   align-items: flex-start;
   background-color: var(--foreground);
-  padding: 120px 60px;
+  padding-top: 120px;
+  padding-bottom: 120px;
 `;
 
 export const Title = styled.h1`
@@ -46,10 +47,27 @@ export const Title = styled.h1`
   color: var(--text-primary);
 `;
 
-/* The original page.tsx had complex structure (intro, ctas) but they were mostly removed/commented out effectively or replaced.
-   The current page.tsx (Step 135) only renders <h1> and <CategoryTop>.
-   So we just need Page container and Main container.
-   And maybe styles for Title.
-   The rest (intro, ctas) is unused, so I won't migrate it unless needed.
-*/
+
+export const HeaderContainer = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+`;
+
+export const LogoWrapper = styled.div`
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+`;
+
+export const StyledTitle = styled(Title)`
+    margin-bottom: 0;
+    margin-left: 12px;
+    font-weight: 700;
+`;
 

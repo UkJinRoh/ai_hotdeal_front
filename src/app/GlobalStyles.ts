@@ -70,7 +70,7 @@ const GlobalStyles = createGlobalStyle`
     body {
         color: var(--foreground);
         background: var(--background);
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: 'BMHANNAPro', Arial, Helvetica, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -96,21 +96,26 @@ const GlobalStyles = createGlobalStyle`
     .inner {
         max-width: 1440px;
         margin: 0 auto;
+        padding: 0 120px;
 
         @media (max-width: 1440px) {
+            max-width: 1280px;
+            padding: 0 100px;
+        }
+
+        @media (max-width: 1280px) {
             max-width: 1024px;
+            padding: 0 40px;
         }
 
         @media (max-width: 1024px) {
-            max-width: 768px;
+            max-width: 100%;
+            padding: 0 30px;
         }
 
         @media (max-width: 768px) {
-            max-width: 480px;
-        }
-
-        @media (max-width: 480px) {
-            max-width: 360px;
+            max-width: 100%;
+            padding: 0 20px;
         }
     }
 `;
