@@ -32,7 +32,7 @@ export default function IntroContainer() {
       <ContentsWrapper>
         <Title>소개</Title>
         <Description>
-          매일 주요 커뮤니티의 핫딜을 수집하여 광고와 스팸을 제거하고, <strong>네이버 최저가 검증</strong>과 <strong>Gemini 2.5 AI의 심층 분석</strong>을 통해 가성비가 좋은 <strong>핫딜</strong>만을 엄선합니다.
+          매일 두 번 주요 커뮤니티의 핫딜을 수집하여 광고와 스팸을 제거하고, <strong>네이버 최저가 검증</strong>과 <strong>Gemini 2.5 AI의 심층 분석</strong>을 통해 가성비가 좋은 <strong>핫딜</strong>만을 엄선합니다.
         </Description>
         <SubDescription>
           <span>• 핫딜이란?</span>
@@ -66,7 +66,7 @@ export default function IntroContainer() {
           </DetailSection>
           <DetailSection>
             <h4>3. AI 심층 분석 (Gemini 2.5) - 최종 확정</h4>
-            <p>살아남은 상위 10%의 항목만 LLM이 직접 읽고 판단합니다.</p>
+            <p>소프트 스코어링 기반으로 남은 데이터들을 LLM이 직접 읽고 판단합니다.</p>
             <ul>
               <li><Blue>분석</Blue> 댓글의 뉘앙스 파악 ("쟁여둔다", "역대가" 등 긍정 감성)</li>
               <li><Blue>분석</Blue> 기업 비품으로서의 적합성 여부 판단</li>
@@ -227,6 +227,7 @@ const Description = styled.p`
     font-size: 15px;
     color: #ccc;
     line-height: 1.6;
+    word-break: keep-all;
     
     strong {
         color: #00c853;
@@ -240,6 +241,12 @@ const SubDescription = styled.p`
     line-height: 1.6;
     margin-top: 12px;
     margin-bottom: 20px;
+    word-break: keep-all;
+    
+    @media (max-width: 640px) {
+        font-size: 12.5px;
+        line-height: 1.8;
+    }
     
     strong {
         color: #00c853;
@@ -250,6 +257,10 @@ const SubDescription = styled.p`
         display: inline-block;
         font-weight: 700;
         margin-bottom: 4px;
+        
+        @media (max-width: 640px) {
+            font-size: 13px;
+        }
     }
 `;
 
@@ -343,17 +354,15 @@ const DetailContent = styled.div<{ $isOpen: boolean }>`
     background-color: #222;
     border: ${props => props.$isOpen ? '1px solid #333' : 'none'};
     border-radius: 12px;
-    
     max-height: ${props => props.$isOpen ? '1000px' : '0'};
     opacity: ${props => props.$isOpen ? '1' : '0'};
     padding: ${props => props.$isOpen ? '20px' : '0 20px'};
     margin-bottom: ${props => props.$isOpen ? '20px' : '0'};
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 30px;
 `;
 
 const DetailSection = styled.div`
@@ -401,10 +410,12 @@ const Green = styled(Badge)`
     background-color: rgba(0, 200, 83, 0.1);
     color: #00c853;
     border: 1px solid rgba(0, 200, 83, 0.3);
+    min-width: 43px;
 `;
 
 const Blue = styled(Badge)`
     background-color: rgba(68, 138, 255, 0.1);
     color: #448aff;
     border: 1px solid rgba(68, 138, 255, 0.3);
+    min-width: 34px;
 `;

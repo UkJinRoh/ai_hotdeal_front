@@ -96,11 +96,9 @@ export default function TotalCard({ item }: TotalCardProps) {
                         </ReportedOverlay>
                     )}
                 </Item>
-                {!isReported && (
-                    <ReportButton onClick={handleReport}>
-                        변동/종료 신고
-                    </ReportButton>
-                )}
+                <ReportButton onClick={handleReport} disabled={isReported} style={{ visibility: isReported ? 'hidden' : 'visible' }}>
+                    변동/종료 신고
+                </ReportButton>
             </CardWrapper>
         </>
     );
