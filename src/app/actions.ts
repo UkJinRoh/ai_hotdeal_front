@@ -66,7 +66,7 @@ export async function getCategoryTop10(category: string) {
     const { data, error } = await supabase
         .from('hotdeals')
         .select('*')
-        .eq('category', category)
+        .in('category', [category, `Category.${category.toUpperCase()}`])
         .lt('report_count', 2)
         .order('score', { ascending: false })
         .order('votes', { ascending: false })

@@ -8,14 +8,14 @@ import TotalContainer from './TotalContainer';
 
 export default function Dashboard() {
 
-    return (
-        <Container>
-            <IntroContainer />
-            <AllContainer />
-            <CategoryContainer categories={['Office', 'Food', 'Drink', 'Toiletries', 'DROP']} />
-            <TotalContainer />
-        </Container>
-    );
+  return (
+    <Container>
+      <IntroContainer />
+      <AllContainer />
+      <CategoryContainer categories={['Office', 'Food', 'Drink', 'Toiletries', 'Others']} />
+      <TotalContainer />
+    </Container>
+  );
 }
 
 const Container = styled.div`

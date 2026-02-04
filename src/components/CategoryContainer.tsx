@@ -11,7 +11,7 @@ interface CategoryContainerProps {
 }
 
 export default function CategoryContainer({
-    categories = ['Food', 'Drink', 'Office', 'DROP', 'Toiletries']
+    categories = ['Food', 'Drink', 'Office', 'Others', 'Toiletries']
 }: CategoryContainerProps) {
     const [categoryData, setCategoryData] = useState<Record<string, any[]>>({});
     const [activeCategory, setActiveCategory] = useState(categories[0]);
@@ -40,7 +40,7 @@ export default function CategoryContainer({
             case 'Food': return '식품';
             case 'Drink': return '음료';
             case 'Office': return '사무용품';
-            case 'DROP': return '기타';
+            case 'Others': return '기타';
             case 'Toiletries': return '생활용품';
             default: return category;
         }

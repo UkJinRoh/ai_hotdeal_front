@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import { incrementReportCount } from '@/app/actions';
 import { addReportedItem, isItemReported } from '@/utils/storage';
+import { getStoreNameFromUrl } from '@/utils/accessibility';
 import CustomAlert from './CustomAlert';
 import styled from 'styled-components';
 
@@ -23,7 +24,7 @@ export default function CategoryCard({ category, items }: CategoryCardProps) {
             case 'Food': return '식품';
             case 'Drink': return '음료';
             case 'Office': return '사무용품';
-            case 'DROP': return '기타';
+            case 'Others': return '기타';
             case 'Toiletries': return '생활용품';
             default: return category;
         }
@@ -122,7 +123,7 @@ function CategoryItem({ item, index }: { item: any, index: number }) {
                         <RankBadge className={`rank-${index + 1}`}>
                             {index + 1}
                         </RankBadge>
-                        {iconSrc && <PlatformIcon src={iconSrc} alt="store image" />}
+                        {iconSrc && <PlatformIcon src={iconSrc} alt={`${getStoreNameFromUrl(item.link || item.url)} 로고`} />}
                     </PlatformIconWrapper>
                     <ItemContent>
                         <ItemTitle>{item.title}</ItemTitle>
@@ -151,7 +152,7 @@ function CategoryItem({ item, index }: { item: any, index: number }) {
                         </ReportedOverlay>
                     )}
                 </Item>
-                <ReportButton onClick={handleReport} disabled={isReported} style={{ visibility: isReported ? 'hidden' : 'visible' }}>
+                <ReportButton onClick={handleReport} disabled={isReported} style={{ visibility: isReported ? 'hidden' : 'visible' }} aria-label="가격 변동 또는 종료 신고">
                     변동/종료 신고
                 </ReportButton>
             </CardWrapper>
@@ -168,7 +169,7 @@ const AIContent = styled.div`
     padding: 10px;
 `;
 
-const AIContentTitle = styled.div`
+const AIContentTitle = styled.h5`
     font-size: 13px;
     font-weight: 700;
     color: #fff;
@@ -345,7 +346,7 @@ const ItemContent = styled.div`
     padding: 10px;
 `;
 
-const ItemTitle = styled.div`
+const ItemTitle = styled.h4`
     font-size: 16px;
     line-height: 1.4;
     font-weight: 700;
