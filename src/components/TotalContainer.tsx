@@ -3,9 +3,14 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getDatePopularity } from '@/app/actions';
 import TotalCard from "./TotalCard";
+import SkeletonCard from './SkeletonCard';
 import styled from 'styled-components';
 
-export default function TotalContainer() {
+interface TotalContainerProps {
+    isLoading?: boolean;
+}
+
+export default function TotalContainer({ isLoading = false }: TotalContainerProps) {
     const [items, setItems] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -14,11 +19,12 @@ export default function TotalContainer() {
     const [searchQuery, setSearchQuery] = useState('');
     const [localSearch, setLocalSearch] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const observer = useRef<IntersectionObserver | null>(null);
 
     const lastElementRef = useCallback((node: HTMLDivElement) => {
-        if (loading) return;
+        if (loading || isLoading) return;
         if (observer.current) observer.current.disconnect();
 
         observer.current = new IntersectionObserver(entries => {
@@ -28,7 +34,7 @@ export default function TotalContainer() {
         });
 
         if (node) observer.current.observe(node);
-    }, [loading, hasMore]);
+    }, [loading, hasMore, isLoading]);
 
     const fetchItems = useCallback(async (pageNum: number, sortOption: 'latest' | 'oldest' | 'popular', query: string, isReset: boolean) => {
         setLoading(true);
@@ -51,6 +57,7 @@ export default function TotalContainer() {
             console.error("Error fetching date popularity:", e);
         } finally {
             setLoading(false);
+            setIsInitialLoading(false);
         }
     }, []);
 
@@ -71,6 +78,7 @@ export default function TotalContainer() {
         if (sort !== newSort) {
             setItems([]);
             setSort(newSort);
+            setIsInitialLoading(true);
         }
     };
 
@@ -80,6 +88,7 @@ export default function TotalContainer() {
         setPage(1);
         setHasMore(true);
         setSearchQuery(localSearch);
+        setIsInitialLoading(true);
     };
 
     const toggleSearch = () => {
@@ -88,6 +97,8 @@ export default function TotalContainer() {
             setTimeout(() => searchInputRef.current?.focus(), 100);
         }
     };
+
+    const showSkeleton = isLoading || isInitialLoading || (loading && items.length === 0);
 
     return (
         <Container>
@@ -117,21 +128,27 @@ export default function TotalContainer() {
                 </SortButtons>
             </Header>
             <Grid>
-                {items.map((item, index) => {
-                    if (items.length === index + 1) {
-                        return (
-                            <div ref={lastElementRef} key={`${item.id}-${index}`}>
-                                <TotalCard item={item} />
-                            </div>
-                        );
-                    } else {
-                        return (
-                            <div key={`${item.id}-${index}`}>
-                                <TotalCard item={item} />
-                            </div>
-                        );
-                    }
-                })}
+                {showSkeleton ? (
+                    [...Array(8)].map((_, i) => (
+                        <SkeletonCard key={i} />
+                    ))
+                ) : (
+                    items.map((item, index) => {
+                        if (items.length === index + 1) {
+                            return (
+                                <div ref={lastElementRef} key={`${item.id}-${index}`}>
+                                    <TotalCard item={item} />
+                                </div>
+                            );
+                        } else {
+                            return (
+                                <div key={`${item.id}-${index}`}>
+                                    <TotalCard item={item} />
+                                </div>
+                            );
+                        }
+                    })
+                )}
             </Grid>
             {loading && <Loading>로딩중...</Loading>}
             {!hasMore && items.length > 0 && <EndOfList>모든 핫딜을 불러왔습니다.</EndOfList>}
@@ -173,26 +190,26 @@ const SearchInput = styled.input<{ $isOpen: boolean }>`
     width: 100%;
     padding: 8px 16px;
     border-radius: 20px;
-    border: 1px solid #444;
-    background-color: #2e2e2e;
-    color: #fff;
+    border: 1px solid var(--border);
+    background-color: var(--card-bg);
+    color: var(--text-primary);
     font-size: 14px;
     outline: none;
     
     &:focus {
-        border-color: #00c853;
-        background-color: #333;
+        border-color: var(--primary);
+        background-color: var(--card-hover);
     }
 
     &::placeholder {
-        color: #888;
+        color: var(--text-secondary);
     }
 `;
 
 const SearchIconBtn = styled.button`
     background: transparent;
     border: none;
-    color: #fff;
+    color: var(--text-primary);
     cursor: pointer;
     padding: 8px;
     display: flex;
@@ -202,7 +219,7 @@ const SearchIconBtn = styled.button`
     transition: background 0.2s;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(128, 128, 128, 0.1);
     }
     
     @media (max-width: 768px) {
@@ -242,9 +259,9 @@ const SortButtons = styled.div`
 const SortButton = styled.button<{ $active: boolean }>`
     padding: 6px 12px;
     border-radius: 20px;
-    border: 1px solid ${props => props.$active ? '#006239' : '#444'};
-    background-color: ${props => props.$active ? '#006239' : 'transparent'};
-    color: ${props => props.$active ? '#fff' : '#aaa'};
+    border: 1px solid ${props => props.$active ? 'var(--primary)' : 'var(--border)'};
+    background-color: ${props => props.$active ? 'var(--primary)' : 'transparent'};
+    color: ${props => props.$active ? '#fff' : 'var(--text-secondary)'};
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -252,8 +269,8 @@ const SortButton = styled.button<{ $active: boolean }>`
     white-space: nowrap;
     
     &:hover {
-        border-color: #00c853;
-        color: #fff;
+        border-color: var(--primary);
+        color: ${props => props.$active ? '#fff' : 'var(--text-primary)'};
     }
 `;
 
@@ -280,13 +297,13 @@ const Grid = styled.div`
 const Loading = styled.div`
     text-align: center;
     padding: 20px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 14px;
 `;
 
 const EndOfList = styled.div`
     text-align: center;
     padding: 20px;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 14px;
 `;

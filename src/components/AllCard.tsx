@@ -41,7 +41,7 @@ export default function AllCard({ items }: AllCardProps) {
                             1024: { slidesPerView: 3.8 },
                         }}
                     >
-                        {items.map((item, index) => (
+                        {items.slice(0, 10).map((item, index) => (
                             <SwiperSlide key={item.id}>
                                 <AllCardItem item={item} index={index} />
                             </SwiperSlide>
@@ -72,7 +72,10 @@ function AllCardItem({ item, index }: { item: any, index: number }) {
         if (!link) return null;
         if (link.includes('naver')) return '네이버';
         if (link.includes('hyundai')) return '현대';
+        if (link.includes('aliexpress')) return '알리익스프레스';
+        if (link.includes('himart')) return '하이마트';
         if (link.includes('gsshop')) return 'GS샵';
+        if (link.includes('cjthemarket')) return 'CJ더마켓';
         if (link.includes('kakao')) return '카카오';
         if (link.includes('auction')) return '옥션';
         if (link.includes('11st')) return '11번가';
@@ -178,7 +181,7 @@ const AIContent = styled.div`
 const AIContentTitle = styled.h5`
     font-size: 13px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 `;
 
 const AIContentBody = styled.div`
@@ -189,7 +192,7 @@ const AIContentBody = styled.div`
     font-size: 12.4px;
     line-height: 1.4;
     font-weight: 500;
-    color: #fff;
+    color: var(--text-secondary);
 `;
 
 const Container = styled.div`
@@ -197,8 +200,6 @@ const Container = styled.div`
   flex-direction: column;
   gap: 10px;
   background-color: var(--background);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   width: 100%;
 `;
 
@@ -251,14 +252,15 @@ const Item = styled.a`
     height: 100%;
     min-height: 400px;
     border-radius: 12px;
-    background-color: var(--background);
+    background-color: var(--card-bg);
     align-items: center;
-    border: 1px solid #2e2e2e;
+    border: 1px solid var(--border);
     cursor: pointer;
     text-decoration: none;
     color: inherit;
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative; 
+    overflow: hidden;
 `;
 
 const ReportedOverlay = styled.div`
@@ -271,7 +273,6 @@ const ReportedOverlay = styled.div`
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.4);
-    border-radius: 12px;
     z-index: 20;
     
     span {
@@ -291,7 +292,7 @@ const PlatformIconWrapper = styled.div`
     min-height: 200px;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
-    background-color: #fff;
+    background-color: var(--platform-bg);
     position: relative;
 `;
 
@@ -342,17 +343,18 @@ const PlatformText = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #fff;
-    color: #000;
+    background-color: var(--platform-bg);
+    color: var(--platform-text);
     font-size: 40px;
     font-family: var(--font-bmhanna);
+    border-bottom: 1px solid var(--border);
 `;
 
 const SubTitle = styled.h3`
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 10px;
-    color: #fff;
+    color: var(--text-primary);
     text-transform: uppercase;
 `;
 
@@ -368,7 +370,7 @@ const ItemTitle = styled.h4`
     font-size: 16px;
     line-height: 1.4;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     height: 42px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -407,7 +409,7 @@ const SavingsText = styled.div`
     gap: 4px;
     font-size: 11px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-secondary);
     opacity: 0.8;
 `;
 

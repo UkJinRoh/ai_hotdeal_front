@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import StyledComponentsRegistry from "../lib/registry";
 import GlobalStyles from "./GlobalStyles";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 import localFont from "next/font/local";
 
@@ -34,8 +35,10 @@ export default function RootLayout({
     <html lang="ko">
       <body className={`${geistSans.variable} ${geistMono.variable} ${bmHanna.variable}`}>
         <StyledComponentsRegistry>
-          <GlobalStyles />
-          {children}
+          <ThemeProvider>
+            <GlobalStyles />
+            {children}
+          </ThemeProvider>
         </StyledComponentsRegistry>
       </body>
     </html>

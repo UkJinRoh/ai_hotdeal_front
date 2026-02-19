@@ -71,7 +71,7 @@ export async function getCategoryTop10(category: string) {
         .order('score', { ascending: false })
         .order('votes', { ascending: false })
         .order('comment_count', { ascending: false })
-        .limit(50);
+        .limit(60);
 
     if (error) {
         console.error(`Error fetching ${category}:`, error);
@@ -82,7 +82,7 @@ export async function getCategoryTop10(category: string) {
 
     let filteredData = data.filter(item => isValidLink(item.link || item.url));
     filteredData = removeDuplicatesByTitle(filteredData);
-    return filteredData.slice(0, 10);
+    return filteredData.slice(0, 50);
 }
 
 // 전체 인기글 함수
@@ -95,13 +95,13 @@ export async function getOverallTop10() {
         .order('score', { ascending: false })
         .order('votes', { ascending: false })
         .order('comment_count', { ascending: false })
-        .limit(50);
+        .limit(60);
 
     if (error) throw error;
 
     let filteredData = data.filter(item => isValidLink(item.link || item.url));
     filteredData = removeDuplicatesByTitle(filteredData);
-    return filteredData.slice(0, 10);
+    return filteredData.slice(0, 50);
 }
 
 // 날짜별 인기글 함수

@@ -5,7 +5,11 @@ import { getCrawlStats } from '@/app/actions';
 import styled from 'styled-components';
 
 
-export default function IntroContainer() {
+interface IntroContainerProps {
+  onAIComplete?: () => void;
+}
+
+export default function IntroContainer({ onAIComplete }: IntroContainerProps) {
 
   const [crawlStats, setCrawlStats] = useState<any[]>([]);
   const [isDetailsOpen, setIsDetailsOpen] = useState(true);
@@ -34,12 +38,14 @@ export default function IntroContainer() {
         <Description>
           매일 두 번 주요 커뮤니티의 핫딜을 수집하여 광고와 스팸을 제거하고, <strong>네이버 최저가 검증</strong>과 <strong>Gemini 2.5 AI의 심층 분석</strong>을 통해 가성비가 좋은 <strong>핫딜</strong>만을 엄선합니다.
         </Description>
+
         <SubDescription>
           <span>• 핫딜이란?</span>
           <br />1. 저렴한 가격에 상품을 구매할 수 있는 특별한 기회를 의미합니다.
           <br />2. 특정 기간에 한정하여 파격적인 할인을 제공하고, 온라인 커뮤니티에서 가성비 좋은 상품 정보를 공유할 때 자주 사용됩니다.
           <br />3. 핫딜 특성상 실시간으로 가격이 변동성이 크기 때문에, 제공된 가격과 상이할 수 있습니다.
         </SubDescription>
+
 
         <DetailToggle onClick={() => setIsDetailsOpen(!isDetailsOpen)}>
           {isDetailsOpen ? '▲ 데이터 처리 기준 접기' : '▼ 데이터 처리 기준 상세보기'}
@@ -128,8 +134,8 @@ export default function IntroContainer() {
 }
 
 const PipelineContainer = styled.div`
-    background-color: #1e1e1e;
-    border: 1px solid #333;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px;
     display: flex;
@@ -154,15 +160,15 @@ const PipelineHeader = styled.div`
 const PipelineTitle = styled.h3`
     font-size: 16px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 `;
 
 const PipelineInsight = styled.div`
     font-size: 14px;
-    color: #aaa;
+    color: var(--text-secondary);
     
     span {
-        color: #00c853;
+        color: var(--primary);
         font-weight: 700;
         font-size: 16px;
     }
@@ -211,7 +217,7 @@ const StepBar = styled.div<{ $width: number; $color: string }>`
 const StepValue = styled.div`
     font-size: 14px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 `;
 
 const PipelineArrow = styled.div`
@@ -225,19 +231,19 @@ const PipelineArrow = styled.div`
 
 const Description = styled.p`
     font-size: 15px;
-    color: #ccc;
+    color: var(--text-secondary);
     line-height: 1.6;
     word-break: keep-all;
     
     strong {
-        color: #00c853;
+        color: var(--primary);
         font-weight: 600;
     }
 `;
 
 const SubDescription = styled.p`
     font-size: 13px;
-    color: #ccc;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin-top: 12px;
     margin-bottom: 20px;
@@ -249,7 +255,7 @@ const SubDescription = styled.p`
     }
     
     strong {
-        color: #00c853;
+        color: var(--primary);
         font-weight: 600;
     }
 
@@ -283,7 +289,7 @@ const ContentsWrapper = styled.div`
 const Title = styled.h2`
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 24px;
 `;
 
@@ -300,8 +306,8 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-    background-color: #1e1e1e;
-    border: 1px solid #333;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px;
     display: flex;
@@ -321,7 +327,7 @@ const Label = styled.div`
 const Value = styled.div<{ $highlight?: boolean }>`
     font-size: 24px;
     font-weight: 800;
-    color: ${props => props.$highlight ? '#00c853' : '#fff'};
+    color: ${props => props.$highlight ? 'var(--primary)' : 'var(--text-primary)'};
     display: flex;
     align-items: baseline;
     gap: 2px;
@@ -336,7 +342,7 @@ const Unit = styled.span`
 const DetailToggle = styled.button`
     background: transparent;
     border: none;
-    color: #888;
+    color: var(--text-secondary);
     font-size: 14px;
     cursor: pointer;
     padding: 10px 0;
@@ -346,13 +352,13 @@ const DetailToggle = styled.button`
     transition: color 0.3s;
     
     &:hover {
-        color: #fff;
+        color: var(--text-primary);
     }
 `;
 
 const DetailContent = styled.div<{ $isOpen: boolean }>`
-    background-color: #222;
-    border: ${props => props.$isOpen ? '1px solid #333' : 'none'};
+    background-color: var(--card-bg);
+    border: ${props => props.$isOpen ? '1px solid var(--border)' : 'none'};
     border-radius: 12px;
     max-height: ${props => props.$isOpen ? '1000px' : '0'};
     opacity: ${props => props.$isOpen ? '1' : '0'};
@@ -367,13 +373,13 @@ const DetailContent = styled.div<{ $isOpen: boolean }>`
 
 const DetailSection = styled.div`
     h4 {
-        color: #fff;
+        color: var(--text-primary);
         font-size: 15px;
         margin-bottom: 8px;
         font-weight: 700;
     }
     p {
-        color: #aaa;
+        color: var(--text-secondary);
         font-size: 13px;
         margin-bottom: 10px;
     }
@@ -386,7 +392,7 @@ const DetailSection = styled.div`
     }
     li {
         font-size: 13px;
-        color: #ccc;
+        color: var(--text-secondary);
         display: flex;
         align-items: center;
         gap: 8px;
@@ -418,4 +424,54 @@ const Blue = styled(Badge)`
     color: #448aff;
     border: 1px solid rgba(68, 138, 255, 0.3);
     min-width: 34px;
+`;
+
+const RecommendButton = styled.button`
+    width: 100%;
+    background: linear-gradient(90deg, #1e1e1e 0%, #2a2a2a 100%);
+    border: 1px solid #00c853;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    margin: 10px 0 20px 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.1);
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 200, 83, 0.2);
+        background: linear-gradient(90deg, #252525 0%, #333 100%);
+    }
+`;
+
+const ButtonIcon = styled.div`
+    font-size: 24px;
+`;
+
+const ButtonText = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+    gap: 4px;
+`;
+
+const ButtonTitle = styled.div`
+    color: #00c853;
+    font-size: 16px;
+    font-weight: 700;
+`;
+
+const ButtonSub = styled.div`
+    color: #aaa;
+    font-size: 13px;
+`;
+
+const ButtonArrow = styled.div`
+    color: #00c853;
+    font-size: 18px;
+    font-weight: 700;
 `;

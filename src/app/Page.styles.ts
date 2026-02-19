@@ -3,30 +3,13 @@
 import styled from 'styled-components';
 
 export const Page = styled.div`
-  --background: #fafafa;
-  --foreground: #fff;
-  --text-primary: #000;
-  --text-secondary: #666;
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
-
   display: flex;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   font-family: var(--font-geist-sans);
   background-color: var(--background);
-
-  @media (prefers-color-scheme: dark) {
-    --background: #000;
-    --foreground: #000;
-    --text-primary: #ededed;
-    --text-secondary: #999;
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-    --button-secondary-border: #1a1a1a;
-  }
+  color: var(--text-primary);
 `;
 
 export const Main = styled.main`
@@ -35,9 +18,10 @@ export const Main = styled.main`
   width: 100%;
   flex-direction: column;
   align-items: flex-start;
-  background-color: var(--foreground);
+  background-color: var(--background);
   padding-top: 120px;
   padding-bottom: 120px;
+  transition: background-color 0.3s ease;
 `;
 
 export const Title = styled.h1`
@@ -63,6 +47,7 @@ export const LogoWrapper = styled.div`
     align-items: center;
     justify-content: center;
     gap: 12px;
+    background-color: var(--logo-bg);
 `;
 
 export const StyledTitle = styled(Title)`

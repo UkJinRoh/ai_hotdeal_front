@@ -54,3 +54,23 @@ export const getDisplayPrice = (dbPrice: string | number | null | undefined, tit
 
     return formatPrice(dbPrice);
 };
+
+export const getPriceInfo = (price: string | number | null | undefined, title: string): { price: number; originalPrice: number } => {
+    let displayPrice = 0;
+
+    // 1. Try to extract from title
+    const extracted = extractPriceFromTitle(title);
+    if (extracted !== null) {
+        displayPrice = extracted;
+    } else if (price !== null && price !== undefined) {
+        // 2. Fallback to DB price
+        const numericString = String(price).replace(/[^0-9]/g, '');
+        const parsed = parseInt(numericString, 10);
+        if (!isNaN(parsed)) displayPrice = parsed;
+    }
+
+    return {
+        price: displayPrice,
+        originalPrice: 0
+    };
+};

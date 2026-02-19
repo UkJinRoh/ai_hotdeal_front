@@ -50,15 +50,57 @@ const GlobalStyles = createGlobalStyle`
 
     /* Globals CSS */
     :root {
-        --background: #ffffff;
-        --foreground: #171717;
+        /* Default Dark Mode */
+        --background: #0a0a0a;
+        --foreground: #ededed;
+        
+        /* Interactive Elements */
+        --primary: #00c853;
+        --secondary: #2a2a2a;
+        --accent: #FFD700;
+
+        /* Text Colors */
+        --text-primary: #ededed;
+        --text-secondary: #999999;
+        
+        /* Borders */
+        --border: #333333;
+        
+        /* Cards */
+        --card-bg: #1e1e1e;
+        --card-hover: #252525;
+
+        /* Platform Area */
+        --platform-bg: #ffffff;
+        --platform-text: #000000;
     }
 
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --background: #0a0a0a;
-            --foreground: #ededed;
-        }
+    [data-theme='light'] {
+        --background: #fff;
+        --foreground: #1d1d1f;
+        
+        /* Interactive Elements */
+        --primary: #00874c; /* Slightly darker green for light mode contrast */
+        --secondary: #e5e5e5;
+        --accent: #FFD700;
+
+        /* Text Colors */
+        --text-primary: #1d1d1f;
+        --text-secondary: #86868b;
+        
+        /* Borders */
+        --border: rgba(0, 0, 0, 0.1); /* Opacity 0.1 for subtle border in light mode as requested 0.5 might be too strong if black, assume user wants lighter */
+        
+        /* Cards */
+        --card-bg: #ffffff;
+        --card-hover: #fbfbfd;
+
+        /* Platform Area (Inverted for Light Mode) */
+        --platform-bg: #000000;
+        --platform-text: #ffffff;
+
+        /* Logo Background */
+        --logo-bg: #ffffff;
     }
 
     html,
@@ -68,11 +110,18 @@ const GlobalStyles = createGlobalStyle`
     }
 
     body {
-        color: var(--foreground);
+        color: var(--text-primary);
         background: var(--background);
         font-family: 'BMHANNAPro', Arial, Helvetica, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        /* transition removed for instant switch */
+    }
+
+    /* Update selection color */
+    ::selection {
+        background: var(--primary);
+        color: #fff;
     }
 
     * {

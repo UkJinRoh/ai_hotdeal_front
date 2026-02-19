@@ -27,7 +27,10 @@ export default function TotalCard({ item }: TotalCardProps) {
         if (!link) return null;
         if (link.includes('naver')) return '네이버';
         if (link.includes('hyundai')) return '현대';
+        if (link.includes('aliexpress')) return '알리익스프레스';
+        if (link.includes('himart')) return '하이마트';
         if (link.includes('gsshop')) return 'GS샵';
+        if (link.includes('cjthemarket')) return 'CJ더마켓';
         if (link.includes('kakao')) return '카카오';
         if (link.includes('auction')) return '옥션';
         if (link.includes('11st')) return '11번가';
@@ -145,7 +148,7 @@ const ReportButton = styled.button`
     
     &:hover {
         text-decoration: underline;
-        color: #fff;
+        color: var(--text-primary);
     }
 
     @media (max-width: 768px) {
@@ -161,14 +164,15 @@ const Item = styled.a`
     height: 100%;
     min-height: 400px;
     border-radius: 12px;
-    background-color: var(--background);
+    background-color: var(--card-bg);
     align-items: center;
-    border: 1px solid #2e2e2e;
+    border: 1px solid var(--border);
     cursor: pointer;
     text-decoration: none;
     color: inherit;
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative; 
+    overflow: hidden;
     
     &:hover {
         transform: translateY(-5px);
@@ -186,7 +190,6 @@ const ReportedOverlay = styled.div`
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.4);
-    border-radius: 12px;
     z-index: 20;
     
     span {
@@ -206,7 +209,7 @@ const PlatformIconWrapper = styled.div`
     min-height: 200px;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
-    background-color: #fff;
+    background-color: var(--platform-bg);
     position: relative;
 `;
 
@@ -222,11 +225,13 @@ const PlatformText = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #fff;
-    color: #000;
+    background-color: var(--platform-bg);
+    color: var(--platform-text);
     font-size: 40px;
     font-family: var(--font-bmhanna);
+    border-bottom: 1px solid var(--border);
 `;
+
 
 const ItemContent = styled.div`
     display: flex;
@@ -240,7 +245,7 @@ const ItemTitle = styled.h3`
     font-size: 16px;
     line-height: 1.4;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     height: 42px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -279,7 +284,7 @@ const SavingsText = styled.div`
     gap: 4px;
     font-size: 11px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-secondary);
     opacity: 0.8;
 `;
 
@@ -295,7 +300,7 @@ const AIContent = styled.div`
 const AIContentTitle = styled.h4`
     font-size: 13px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 `;
 
 const AIContentBody = styled.div`
@@ -306,5 +311,5 @@ const AIContentBody = styled.div`
     font-size: 12.4px;
     line-height: 1.4;
     font-weight: 500;
-    color: #fff;
+    color: var(--text-secondary);
 `;
