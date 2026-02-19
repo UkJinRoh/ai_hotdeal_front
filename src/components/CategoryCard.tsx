@@ -6,6 +6,7 @@ import { Navigation, Pagination } from 'swiper/modules';
 import { incrementReportCount } from '@/app/actions';
 import { addReportedItem, isItemReported } from '@/utils/storage';
 import { getStoreNameFromUrl } from '@/utils/accessibility';
+import { formatPrice, getDisplayPrice } from '@/utils/format';
 import CustomAlert from './CustomAlert';
 import styled from 'styled-components';
 
@@ -75,20 +76,28 @@ function CategoryItem({ item, index }: { item: any, index: number }) {
         }
     }, [item.id]);
 
-    const getPlatformIcon = (link: string) => {
+    const getPlatformName = (link: string) => {
         if (!link) return null;
-        if (link.includes('naver')) return '/icons/naver.png';
-        if (link.includes('auction')) return '/icons/auction.png';
-        if (link.includes('11st')) return '/icons/11st.png';
-        if (link.includes('coupang')) return '/icons/coupang.png';
-        if (link.includes('gmarket')) return '/icons/gmarket.png';
-        if (link.includes('lotte')) return '/icons/lotte.png';
-        if (link.includes('toss')) return '/icons/toss.png';
-        if (link.includes('ohou')) return '/icons/ohouse.png';
-        return null;
-    };
+        if (link.includes('naver')) return '네이버';
+        if (link.includes('hyundai')) return '현대';
+        if (link.includes('gsshop')) return 'GS샵';
+        if (link.includes('kakao')) return '카카오';
+        if (link.includes('auction')) return '옥션';
+        if (link.includes('11st')) return '11번가';
+        if (link.includes('coupang')) return '쿠팡';
+        if (link.includes('gmarket')) return '지마켓';
+        if (link.includes('lotte')) return '롯데';
+        if (link.includes('toss')) return '토스';
+        if (link.includes('ohou')) return '오늘의집';
+        if (link.includes('wemakeprice')) return '위메프';
+        if (link.includes('tmon')) return '티몬';
+        if (link.includes('ssg')) return '신세계';
+        if (link.includes('cjmall')) return 'CJ';
+        return '상품';
+    }
 
-    const iconSrc = getPlatformIcon(item.link || item.url);
+    const platformName = getPlatformName(item.link || item.url);
+    const iconSrc = null;
 
     const handleReport = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -123,14 +132,18 @@ function CategoryItem({ item, index }: { item: any, index: number }) {
                         <RankBadge className={`rank-${index + 1}`}>
                             {index + 1}
                         </RankBadge>
-                        {iconSrc && <PlatformIcon src={iconSrc} alt={`${getStoreNameFromUrl(item.link || item.url)} 로고`} />}
+                        {platformName ? (
+                            <PlatformText>{platformName}</PlatformText>
+                        ) : (
+                            iconSrc && <PlatformIcon src={iconSrc} alt={`${getStoreNameFromUrl(item.link || item.url)} 로고`} />
+                        )}
                     </PlatformIconWrapper>
                     <ItemContent>
                         <ItemTitle>{item.title}</ItemTitle>
                         <ItemPrice>
-                            <p>{item.discount_price ? `${parseInt(item.discount_price).toLocaleString()}원` : '가격 정보 없음'}</p>
+                            <p>{getDisplayPrice(item.discount_price, item.title)}</p>
                             <SavingsText>
-                                정가 대비 {item.savings ? `${parseInt(item.savings).toLocaleString()}원 ↓` : '가격 정보 없음'}
+                                정가 대비 {item.savings ? `${formatPrice(item.savings).replace('원', '')}원 ↓` : '가격 정보 없음'}
                             </SavingsText>
                         </ItemPrice>
                         <ItemInfo>
@@ -328,6 +341,18 @@ const PlatformIcon = styled.img`
     width: 100%;
     height: 100%;
     object-fit: contain;
+`;
+
+const PlatformText = styled.div`
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+    color: #000;
+    font-size: 40px;
+    font-family: var(--font-bmhanna);
 `;
 
 const SubTitle = styled.h3`

@@ -11,7 +11,7 @@ interface CategoryContainerProps {
 }
 
 export default function CategoryContainer({
-    categories = ['Food', 'Drink', 'Office', 'Others', 'Toiletries']
+    categories = ['Food', 'Drink', 'Office', 'Others', 'TOILETRIES']
 }: CategoryContainerProps) {
     const [categoryData, setCategoryData] = useState<Record<string, any[]>>({});
     const [activeCategory, setActiveCategory] = useState(categories[0]);
