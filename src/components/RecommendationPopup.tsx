@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import { useState, useEffect } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 interface RecommendationPopupProps {
     isOpen: boolean;
@@ -17,8 +19,20 @@ export default function RecommendationPopup({ isOpen, onClose, onComplete }: Rec
         priority: ''
     });
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [logs, setLogs] = useState<string[]>([]);
+    const [currentLog, setCurrentLog] = useState<string>('');
     const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTimeout(() => {
+                setIsAnalyzing(false);
+                setStep(0);
+                setCurrentLog('');
+                setProgress(0);
+                setPreferences({ purpose: '', category: '', priority: '' });
+            }, 500);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -30,27 +44,40 @@ export default function RecommendationPopup({ isOpen, onClose, onComplete }: Rec
             } else {
                 finishSurvey();
             }
-        }, 250);
+        }, 300);
     };
 
     const finishSurvey = () => {
         setIsAnalyzing(true);
-        const processingLogs = [
-            "Connecting to Gemini 2.5 AI...",
-            "Analyzing hotdeal items...",
-            "Filtering by verified sellers...",
-            `Optimizing for '${preferences.priority || 'Best Match'}'...`,
-            "Calculating cost-efficiency score...",
-            "Finalizing recommendation list..."
+        const categoryMap: Record<string, string> = {
+            Office: '사무용품관',
+            Food: '식품관',
+            Drink: '음료 코너',
+            Toiletries: '생활용품 창고',
+            Others: '기타 매장'
+        };
+
+        const targetCorner = categoryMap[preferences.category] || '창고 전체';
+
+        // Add fun waiting text
+        const martLogs = [
+            "고객님이 찾으시는 맞춤 상품을 탐색합니다! 🏃‍♂️💨",
+            `${targetCorner}로 달려가서 매대를 확인하는 중... 💦`,
+            "진짜 할인이 맞는지 가격표를 꼼꼼히 비교하고 있어요 🧐",
+            `'${preferences.priority === 'discount' ? '초특가' : preferences.priority === 'rating' ? '평점 만점' : '인기 폭발'}' 상품들 위주로 장바구니에 챙기는 중 🛒`,
+            "가짜 할인, 광고 상품은 전부 바깥으로 던져버립니다! 🗑️",
+            "야호! 완벽한 상품들을 찾았어요. 곧 보여드릴게요 🎁"
         ];
 
         let logIndex = 0;
+        setCurrentLog(martLogs[0]);
+
         const logInterval = setInterval(() => {
-            if (logIndex < processingLogs.length) {
-                setLogs(prev => [...prev, processingLogs[logIndex]]);
-                logIndex++;
+            logIndex++;
+            if (logIndex < martLogs.length) {
+                setCurrentLog(martLogs[logIndex]);
             }
-        }, 600);
+        }, 800);
 
         const progressInterval = setInterval(() => {
             setProgress(prev => {
@@ -60,113 +87,187 @@ export default function RecommendationPopup({ isOpen, onClose, onComplete }: Rec
                     setTimeout(() => {
                         onComplete(preferences);
                         onClose();
-                        // Reset state
-                        setTimeout(() => {
-                            setIsAnalyzing(false);
-                            setStep(0);
-                            setLogs([]);
-                            setProgress(0);
-                        }, 500);
-                    }, 800);
+                    }, 1500); // 100% 보여주고 조금 대기
                     return 100;
                 }
-                return prev + 2;
+                // 부드럽지만 불규칙하게 차오름
+                const increment = Math.random() * 8 + 3;
+                return Math.min(prev + increment, 100);
             });
-        }, 50);
+        }, 200);
     };
 
     const questions = [
         {
             key: 'category',
-            question: '어떤 상품을 찾고 계신가요?',
+            question: '어떤 분류가 필요하신가요?',
             options: [
-                { label: '디지털/오피스', value: 'digital', icon: '💻' },
-                { label: '식품/음료', value: 'food', icon: '🍔' },
-                { label: '생활용품', value: 'living', icon: '🧻' },
-                { label: '패션/뷰티', value: 'fashion', icon: '👕' }
+                { label: '사무용품', value: 'Office', icon: '💻' },
+                { label: '식품', value: 'Food', icon: '🍔' },
+                { label: '음료', value: 'Drink', icon: '🥤' },
+                { label: '생활용품', value: 'Toiletries', icon: '🧻' },
+                { label: '기타/전체', value: 'Others', icon: '�' }
             ]
         },
         {
             key: 'priority',
-            question: '가장 중요하게 생각하는 요소는?',
+            question: '가장 깐깐하게 볼 조건은?',
             options: [
-                { label: '압도적인 가격 할인', value: 'discount', icon: '💸' },
-                { label: '높은 사용자 평점', value: 'rating', icon: '⭐' },
-                { label: '많은 사용자 호응', value: 'reaction', icon: '🔥' }
+                { label: '파격적인 역대가', value: 'discount', icon: '💸' },
+                { label: '압도적인 댓글 수', value: 'reaction', icon: '🔥' },
+                { label: '최고의 품질 평점', value: 'rating', icon: '⭐' }
             ]
         }
     ];
 
     return (
-        <Overlay>
-            <PopupContainer>
-                <CloseButton onClick={onClose}>×</CloseButton>
+        <Overlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={onClose}
+        >
+            <PopupContainer onClick={(e) => e.stopPropagation()}>
 
-                {isAnalyzing ? (
-                    <AnalyzingView>
-                        <PulseContainer>
-                            <PulseCircle $delay={0} />
-                            <PulseCircle $delay={1} />
-                            <PulseCircle $delay={2} />
-                            <Core />
-                        </PulseContainer>
-                        <StatusMessage>
-                            <StatusTitle>AI Analyzing...</StatusTitle>
-                            <StatusSub>{logs[logs.length - 1] || "Connecting..."}</StatusSub>
-                        </StatusMessage>
-                        <ProgressBarContainer>
-                            <ProcessingBar $width={progress} />
-                        </ProgressBarContainer>
-                    </AnalyzingView>
-                ) : (
-                    <>
-                        <ProgressBar>
-                            <Progress $width={((step + 1) / questions.length) * 100} />
-                        </ProgressBar>
-                        <HeaderSection>
-                            <StepIndicator>Step {step + 1}/{questions.length}</StepIndicator>
-                            <Question>{questions[step].question}</Question>
-                        </HeaderSection>
+                <AnimatePresence mode="wait">
+                    {isAnalyzing ? (
+                        <MascotView
+                            key="analyzing"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                        >
+                            <SearchlightBackground />
 
-                        <OptionsGrid>
-                            {questions[step].options.map((option) => (
-                                <OptionButton
-                                    key={option.value}
-                                    onClick={() => handleSelect(questions[step].key, option.value)}
-                                    $selected={preferences[questions[step].key] === option.value}
+                            <MascotStage>
+                                <motion.div
+                                    animate={{
+                                        x: [-40, 40, -30, 50, 0],
+                                        y: [0, -20, 0, -15, 0],
+                                        rotate: [-5, 5, -3, 6, 0]
+                                    }}
+                                    transition={{
+                                        duration: 2.5,
+                                        ease: "easeInOut",
+                                        repeat: Infinity,
+                                    }}
+                                    style={{ position: 'relative' }}
                                 >
-                                    <OptionContent>
-                                        <OptionIcon>{option.icon}</OptionIcon>
-                                        <OptionLabel>{option.label}</OptionLabel>
-                                    </OptionContent>
-                                    <ArrowIcon>→</ArrowIcon>
-                                </OptionButton>
-                            ))}
-                        </OptionsGrid>
-                    </>
-                )}
+                                    <MagnifyingGlass>×</MagnifyingGlass>
+                                    <LogoImage
+                                        src="/logo.png"
+                                        alt="핫딜 연구소 탐색 중"
+                                        width={100}
+                                        height={100}
+                                        unoptimized
+                                    />
+                                </motion.div>
+                                <Shadow
+                                    animate={{
+                                        scale: [1, 0.7, 1, 0.6, 1],
+                                        opacity: [0.5, 0.2, 0.5, 0.15, 0.5]
+                                    }}
+                                    transition={{
+                                        duration: 2.5,
+                                        ease: "easeInOut",
+                                        repeat: Infinity,
+                                    }}
+                                />
+                            </MascotStage>
+
+                            <StatusMessageContainer>
+                                <AnimatePresence mode="popLayout">
+                                    <motion.div
+                                        key={currentLog}
+                                        initial={{ opacity: 0, y: 15 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -15 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <StatusText>{currentLog}</StatusText>
+                                    </motion.div>
+                                </AnimatePresence>
+                            </StatusMessageContainer>
+
+                            <CartProgressContainer>
+                                <CartTrack>
+                                    <CartFill $width={progress} />
+                                    <CartIconWrapper $progress={progress}>
+                                        {progress >= 100 ? '🎁' : '🛒'}
+                                    </CartIconWrapper>
+                                </CartTrack>
+                                <ProgressPercentage>{Math.round(progress)}%</ProgressPercentage>
+                            </CartProgressContainer>
+
+                        </MascotView>
+                    ) : (
+                        <SurveyView
+                            key="survey"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <ProgressBar>
+                                <Progress $width={((step + 1) / questions.length) * 100} />
+                            </ProgressBar>
+                            <HeaderSection>
+                                <StepIndicator>맞춤 설정 {step + 1}/{questions.length}</StepIndicator>
+                                <Question>{questions[step].question}</Question>
+                            </HeaderSection>
+
+                            <OptionsGrid>
+                                {questions[step].options.map((option, i) => (
+                                    <OptionButton
+                                        key={option.value}
+                                        onClick={() => handleSelect(questions[step].key, option.value)}
+                                        $selected={preferences[questions[step].key] === option.value}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        <OptionContent>
+                                            <OptionIcon>{option.icon}</OptionIcon>
+                                            <OptionLabel>{option.label}</OptionLabel>
+                                        </OptionContent>
+                                        <ArrowIcon>→</ArrowIcon>
+                                    </OptionButton>
+                                ))}
+                            </OptionsGrid>
+                        </SurveyView>
+                    )}
+                </AnimatePresence>
             </PopupContainer>
         </Overlay>
     );
 }
 
-const fadeIn = keyframes`
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+const spotlightAnim = keyframes`
+    0% { transform: translateX(-50%) translateY(-50%) rotate(-30deg); opacity: 0.3; }
+    50% { transform: translateX(50%) translateY(30%) rotate(40deg); opacity: 0.6; }
+    100% { transform: translateX(-50%) translateY(-50%) rotate(-30deg); opacity: 0.3; }
 `;
 
-const pulse = keyframes`
-    0% { transform: scale(0.8); opacity: 0.5; }
-    100% { transform: scale(2); opacity: 0; }
-`;
+const SearchlightBackground = () => (
+    <SearchlightWrapper>
+        <LightBeam />
+    </SearchlightWrapper>
+);
 
-const Overlay = styled.div`
+
+// --- STYLED COMPONENTS ---
+
+const Overlay = styled(motion.div)`
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
@@ -175,49 +276,34 @@ const Overlay = styled.div`
 `;
 
 const PopupContainer = styled.div`
-    background: rgba(30, 30, 30, 0.8);
+    background: var(--card-bg);
     width: 90%;
-    max-width: 420px;
+    max-width: 460px;
     padding: 40px;
-    border-radius: 24px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 28px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
     position: relative;
-    animation: ${fadeIn} 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    min-height: 450px;
+    min-height: 480px;
     display: flex;
     flex-direction: column;
-    color: #fff;
+    color: var(--text-primary);
+    overflow: hidden;
 `;
 
-const CloseButton = styled.button`
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255,255,255,0.1);
-    border: none;
-    color: #fff;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    font-size: 18px;
+
+
+const SurveyView = styled(motion.div)`
     display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    
-    &:hover { 
-        background: rgba(255,255,255,0.2);
-        transform: rotate(90deg);
-    }
+    flex-direction: column;
+    flex: 1;
 `;
 
 const ProgressBar = styled.div`
-    width: 95%;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
+    width: 100%;
+    height: 6px;
+    background: var(--secondary);
+    border-radius: 3px;
     margin-bottom: 30px;
     overflow: hidden;
 `;
@@ -225,160 +311,243 @@ const ProgressBar = styled.div`
 const Progress = styled.div<{ $width: number }>`
     width: ${props => props.$width}%;
     height: 100%;
-    background: linear-gradient(90deg, #448aff, #00c853);
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 10px rgba(68,138,255,0.5);
+    background: var(--primary);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 3px;
 `;
 
 const HeaderSection = styled.div`
-    margin-bottom: 30px;
+    margin-bottom: 36px;
 `;
 
 const StepIndicator = styled.div`
-    color: #448aff;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 12px;
 `;
 
 const Question = styled.h2`
-    color: #fff;
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.3;
+    color: var(--text-primary);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.4;
     margin: 0;
-    background: linear-gradient(to right, #fff, #aaa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+    word-break: keep-all;
 `;
 
 const OptionsGrid = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+
+    @media (max-width: 400px) {
+        grid-template-columns: 1fr;
+    }
 `;
 
-const OptionButton = styled.button<{ $selected?: boolean }>`
-    background: ${props => props.$selected ? 'rgba(68, 138, 255, 0.15)' : 'rgba(255, 255, 255, 0.03)'};
-    border: 1px solid ${props => props.$selected ? '#448aff' : 'rgba(255, 255, 255, 0.1)'};
-    padding: 18px 20px;
-    border-radius: 16px;
+const OptionButton = styled(motion.button) <{ $selected?: boolean }>`
+    background: ${props => props.$selected ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 255, 255, 0.04)'};
+    border: 1px solid ${props => props.$selected ? 'var(--primary)' : 'rgba(255, 255, 255, 0.08)'};
+    padding: 24px 20px;
+    border-radius: 24px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 12px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
+    box-shadow: ${props => props.$selected ? '0 8px 24px rgba(0, 200, 83, 0.2)' : '0 4px 12px rgba(0,0,0,0.1)'};
+    backdrop-filter: blur(10px);
 
     &:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border-color: ${props => props.$selected ? 'var(--primary)' : 'rgba(255,255,255,0.2)'};
+        background: ${props => props.$selected ? 'rgba(0, 200, 83, 0.2)' : 'rgba(255, 255, 255, 0.08)'};
     }
 `;
 
 const OptionContent = styled.div`
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 `;
 
 const OptionIcon = styled.span`
-    font-size: 22px;
+    font-size: 36px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 `;
 
 const OptionLabel = styled.span`
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    text-align: center;
+    word-break: keep-all;
 `;
 
 const ArrowIcon = styled.span`
-    color: rgba(255,255,255,0.3);
-    font-size: 18px;
-    transition: transform 0.2s;
-    
-    ${OptionButton}:hover & {
-        transform: translateX(4px);
-        color: #fff;
-    }
+    display: none; // Hide arrow icon in grid layout
 `;
 
-// Analyzing View Styles
-const AnalyzingView = styled.div`
+const MascotView = styled(motion.div)`
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     flex: 1;
-    min-height: 300px;
+    position: relative;
+    padding-top: 20px;
+    color: #fff; /* Force white text for dark searchlight bg */
+    border-radius: inherit;
 `;
 
-const PulseContainer = styled.div`
+const SearchlightWrapper = styled.div`
+    position: absolute;
+    inset: -20px;
+    background: #1a1a1a;
+    overflow: hidden;
+    z-index: 0;
+    border-radius: inherit;
+`;
+
+const LightBeam = styled.div`
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(255, 235, 150, 0.4) 0%, rgba(255, 235, 150, 0) 60%);
+    top: 50%;
+    left: 50%;
+    margin-top: -400px;
+    margin-left: -400px;
+    pointer-events: none;
+    transform-origin: center;
+    animation: ${spotlightAnim} 5s infinite ease-in-out alternate;
+    mix-blend-mode: overlay;
+`;
+
+const MascotStage = styled.div`
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 180px;
+    height: 160px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+`;
+
+const LogoImage = styled(Image)`
+    object-fit: contain;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+    border-radius: 50%;
+    background: #fff;
+    padding: 10px;
+`;
+
+const MagnifyingGlass = styled.div`
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    background: #fff;
+    color: #000;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 40px;
+    font-size: 22px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 12;
+    transform: rotate(-15deg);
+    
+    &::after {
+        content: "🔍";
+        position: absolute;
+        font-size: 20px;
+    }
 `;
 
-const Core = styled.div`
-    width: 20px;
-    height: 20px;
-    background: #fff;
+const Shadow = styled(motion.div)`
+    width: 80px;
+    height: 12px;
+    background: rgba(0,0,0,0.6);
     border-radius: 50%;
-    z-index: 10;
-    box-shadow: 0 0 20px rgba(255,255,255,0.8);
+    margin-top: 10px;
+    filter: blur(4px);
 `;
 
-const PulseCircle = styled.div<{ $delay: number }>`
-    position: absolute;
-    width: 60px;
+const StatusMessageContainer = styled.div`
     height: 60px;
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    animation: ${pulse} 2s infinite ease-out;
-    animation-delay: ${props => props.$delay * 0.6}s;
-`;
-
-const StatusMessage = styled.div`
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 30px;
+    z-index: 10;
+    text-align: center;
 `;
 
-const StatusTitle = styled.div`
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    background: linear-gradient(90deg, #448aff, #00c853);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+const StatusText = styled.div`
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+    word-break: keep-all;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.4);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
 `;
 
-const StatusSub = styled.div`
-    font-size: 14px;
-    color: rgba(255,255,255,0.6);
-    font-family: 'SF Mono', 'Menlo', monospace;
-    min-height: 20px;
+const CartProgressContainer = styled.div`
+    width: 100%;
+    z-index: 10;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
 `;
 
-const ProgressBarContainer = styled.div`
-    width: 60%;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
-    overflow: hidden;
+const CartTrack = styled.div`
+    width: 100%;
+    height: 12px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 `;
 
-const ProcessingBar = styled.div<{ $width: number }>`
+const CartFill = styled.div<{ $width: number }>`
     width: ${props => props.$width}%;
     height: 100%;
-    background: linear-gradient(90deg, #448aff, #00c853);
-    transition: width 0.1s linear;
-    box-shadow: 0 0 10px rgba(68,138,255,0.5);
+    background: linear-gradient(90deg, #00c853 0%, #69f0ae 100%);
+    border-radius: 8px;
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 10px rgba(0, 200, 83, 0.5);
+`;
+
+const CartIconWrapper = styled.div<{ $progress: number }>`
+    position: absolute;
+    top: 50%;
+    left: ${props => props.$progress}%;
+    transform: translate(-50%, -50%) ${props => props.$progress < 100 ? 'scaleX(-1)' : 'scaleX(1)'};
+    font-size: 28px;
+    transition: left 0.3s ease-out;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
+    z-index: 20;
+    margin-top: -10px; /* Ride exactly on the track */
+`;
+
+const ProgressPercentage = styled.div`
+    font-size: 18px;
+    font-weight: 800;
+    color: #69f0ae;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 `;

@@ -16,16 +16,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        // 1. Check local storage
-        const savedTheme = localStorage.getItem('theme') as Theme;
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        } else {
-            // Default to dark as requested
-            setTheme('dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
+        // Sync with the initialized DOM state by the layout blocking script
+        const initialTheme = document.documentElement.getAttribute('data-theme') as Theme || 'dark';
+        setTheme(initialTheme);
         setMounted(true);
     }, []);
 
