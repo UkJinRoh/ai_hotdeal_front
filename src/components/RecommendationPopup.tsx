@@ -1,124 +1,90 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { getRecommendationFromPrompt } from '@/app/actions';
 
 interface RecommendationPopupProps {
     isOpen: boolean;
     onClose: () => void;
-    onComplete: (preferences: any) => void;
+    onComplete: (result: any) => void;
 }
 
 export default function RecommendationPopup({ isOpen, onClose, onComplete }: RecommendationPopupProps) {
-    const [step, setStep] = useState(0);
-    const [preferences, setPreferences] = useState<{ [key: string]: string }>({
-        purpose: '',
-        category: '',
-        priority: ''
-    });
+    const [prompt, setPrompt] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [currentLog, setCurrentLog] = useState<string>('');
+    const [currentLog, setCurrentLog] = useState<string>('핫딜 연구원이 고객님의 말씀을 듣고 있습니다... 🧐');
     const [progress, setProgress] = useState(0);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const isAnalyzingRef = useRef(false);
 
     useEffect(() => {
         if (!isOpen) {
             setTimeout(() => {
+                isAnalyzingRef.current = false;
                 setIsAnalyzing(false);
-                setStep(0);
-                setCurrentLog('');
+                setPrompt('');
+                setCurrentLog('핫딜 연구원이 고객님의 말씀을 듣고 있습니다... 🧐');
                 setProgress(0);
-                setPreferences({ purpose: '', category: '', priority: '' });
             }, 500);
+        } else {
+            // Focus textarea when opened
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 100);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const handleSelect = (key: string, value: string) => {
-        setPreferences(prev => ({ ...prev, [key]: value }));
-        setTimeout(() => {
-            if (step < questions.length - 1) {
-                setStep(prev => prev + 1);
-            } else {
-                finishSurvey();
-            }
-        }, 300);
-    };
+    const handleSubmit = async () => {
+        if (!prompt.trim() || isAnalyzing || isAnalyzingRef.current) return;
 
-    const finishSurvey = () => {
+        isAnalyzingRef.current = true;
         setIsAnalyzing(true);
-        const categoryMap: Record<string, string> = {
-            Office: '사무용품관',
-            Food: '식품관',
-            Drink: '음료 코너',
-            Toiletries: '생활용품 창고',
-            Others: '기타 매장'
-        };
+        setCurrentLog('AI가 추천 상품을 샅샅이 검색하고 있어요 🏃‍♂️💨');
+        setProgress(20);
 
-        const targetCorner = categoryMap[preferences.category] || '창고 전체';
-
-        // Add fun waiting text
-        const martLogs = [
-            "고객님이 찾으시는 맞춤 상품을 탐색합니다! 🏃‍♂️💨",
-            `${targetCorner}로 달려가서 매대를 확인하는 중... 💦`,
-            "진짜 할인이 맞는지 가격표를 꼼꼼히 비교하고 있어요 🧐",
-            `'${preferences.priority === 'discount' ? '초특가' : preferences.priority === 'rating' ? '평점 만점' : '인기 폭발'}' 상품들 위주로 장바구니에 챙기는 중 🛒`,
-            "가짜 할인, 광고 상품은 전부 바깥으로 던져버립니다! 🗑️",
-            "야호! 완벽한 상품들을 찾았어요. 곧 보여드릴게요 🎁"
-        ];
-
-        let logIndex = 0;
-        setCurrentLog(martLogs[0]);
-
-        const logInterval = setInterval(() => {
-            logIndex++;
-            if (logIndex < martLogs.length) {
-                setCurrentLog(martLogs[logIndex]);
-            }
-        }, 800);
-
+        // Fake progress bar while waiting for AI
         const progressInterval = setInterval(() => {
             setProgress(prev => {
-                if (prev >= 100) {
-                    clearInterval(progressInterval);
-                    clearInterval(logInterval);
-                    setTimeout(() => {
-                        onComplete(preferences);
-                        onClose();
-                    }, 1500); // 100% 보여주고 조금 대기
-                    return 100;
-                }
-                // 부드럽지만 불규칙하게 차오름
-                const increment = Math.random() * 8 + 3;
-                return Math.min(prev + increment, 100);
+                if (prev >= 85) return 85; // Stop at 85% until AI finishes
+                return prev + Math.random() * 5;
             });
-        }, 200);
+        }, 500);
+
+        const res = await getRecommendationFromPrompt(prompt);
+        clearInterval(progressInterval);
+
+        if (res.success) {
+            setProgress(100);
+            setCurrentLog(res.aiData?.ai_comment || '최고의 핫딜을 찾았습니다! ✨');
+
+            setTimeout(() => {
+                onComplete({
+                    data: res.data,
+                    aiData: res.aiData,
+                });
+                onClose();
+            }, 2500); // 2.5 seconds to read the comment
+        } else {
+            setCurrentLog('앗, 추천 중 문제가 발생했어요 😢 다시 시도해주세요.');
+            setTimeout(() => {
+                isAnalyzingRef.current = false;
+                setIsAnalyzing(false);
+                setProgress(0);
+            }, 3000);
+        }
     };
 
-    const questions = [
-        {
-            key: 'category',
-            question: '어떤 분류가 필요하신가요?',
-            options: [
-                { label: '사무용품', value: 'Office', icon: '💻' },
-                { label: '식품', value: 'Food', icon: '🍔' },
-                { label: '음료', value: 'Drink', icon: '🥤' },
-                { label: '생활용품', value: 'Toiletries', icon: '🧻' },
-                { label: '기타/전체', value: 'Others', icon: '�' }
-            ]
-        },
-        {
-            key: 'priority',
-            question: '가장 깐깐하게 볼 조건은?',
-            options: [
-                { label: '파격적인 역대가', value: 'discount', icon: '💸' },
-                { label: '압도적인 댓글 수', value: 'reaction', icon: '🔥' },
-                { label: '최고의 품질 평점', value: 'rating', icon: '⭐' }
-            ]
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
         }
-    ];
+    };
 
     return (
         <Overlay
@@ -203,42 +169,35 @@ export default function RecommendationPopup({ isOpen, onClose, onComplete }: Rec
 
                         </MascotView>
                     ) : (
-                        <SurveyView
-                            key="survey"
+                        <PromptView
+                            key="prompt"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <ProgressBar>
-                                <Progress $width={((step + 1) / questions.length) * 100} />
-                            </ProgressBar>
                             <HeaderSection>
-                                <StepIndicator>맞춤 설정 {step + 1}/{questions.length}</StepIndicator>
-                                <Question>{questions[step].question}</Question>
+                                <Question>무엇을 찾고 계신가요?<br />핫딜 연구원에게 물어보세요!</Question>
                             </HeaderSection>
 
-                            <OptionsGrid>
-                                {questions[step].options.map((option, i) => (
-                                    <OptionButton
-                                        key={option.value}
-                                        onClick={() => handleSelect(questions[step].key, option.value)}
-                                        $selected={preferences[questions[step].key] === option.value}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.1 }}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        <OptionContent>
-                                            <OptionIcon>{option.icon}</OptionIcon>
-                                            <OptionLabel>{option.label}</OptionLabel>
-                                        </OptionContent>
-                                        <ArrowIcon>→</ArrowIcon>
-                                    </OptionButton>
-                                ))}
-                            </OptionsGrid>
-                        </SurveyView>
+                            <InputWrapper>
+                                <SearchTextarea
+                                    ref={textareaRef}
+                                    placeholder="예) 이번 주말 캠핑 갈 건데 가성비 먹거리 추천해줘"
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <SubmitButton
+                                    onClick={handleSubmit}
+                                    disabled={!prompt.trim()}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    전송 🚀
+                                </SubmitButton>
+                            </InputWrapper>
+                        </PromptView>
                     )}
                 </AnimatePresence>
             </PopupContainer>
@@ -293,38 +252,15 @@ const PopupContainer = styled.div`
 
 
 
-const SurveyView = styled(motion.div)`
+const PromptView = styled(motion.div)`
     display: flex;
     flex-direction: column;
     flex: 1;
-`;
-
-const ProgressBar = styled.div`
-    width: 100%;
-    height: 6px;
-    background: var(--secondary);
-    border-radius: 3px;
-    margin-bottom: 30px;
-    overflow: hidden;
-`;
-
-const Progress = styled.div<{ $width: number }>`
-    width: ${props => props.$width}%;
-    height: 100%;
-    background: var(--primary);
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 3px;
+    justify-content: center;
 `;
 
 const HeaderSection = styled.div`
-    margin-bottom: 36px;
-`;
-
-const StepIndicator = styled.div`
-    color: var(--primary);
-    font-size: 14px;
-    font-weight: 800;
-    margin-bottom: 12px;
+    margin-bottom: 24px;
 `;
 
 const Question = styled.h2`
@@ -337,60 +273,59 @@ const Question = styled.h2`
     word-break: keep-all;
 `;
 
-const OptionsGrid = styled.div`
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-
-    @media (max-width: 400px) {
-        grid-template-columns: 1fr;
-    }
-`;
-
-const OptionButton = styled(motion.button) <{ $selected?: boolean }>`
-    background: ${props => props.$selected ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 255, 255, 0.04)'};
-    border: 1px solid ${props => props.$selected ? 'var(--primary)' : 'rgba(255, 255, 255, 0.08)'};
-    padding: 24px 20px;
-    border-radius: 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    cursor: pointer;
+const InputWrapper = styled.div`
+    position: relative;
     width: 100%;
-    box-shadow: ${props => props.$selected ? '0 8px 24px rgba(0, 200, 83, 0.2)' : '0 4px 12px rgba(0,0,0,0.1)'};
-    backdrop-filter: blur(10px);
-
-    &:hover {
-        border-color: ${props => props.$selected ? 'var(--primary)' : 'rgba(255,255,255,0.2)'};
-        background: ${props => props.$selected ? 'rgba(0, 200, 83, 0.2)' : 'rgba(255, 255, 255, 0.08)'};
-    }
+    margin-top: 20px;
 `;
 
-const OptionContent = styled.div`
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-`;
-
-const OptionIcon = styled.span`
-    font-size: 36px;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-`;
-
-const OptionLabel = styled.span`
+const SearchTextarea = styled.textarea`
+    width: 100%;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
     color: var(--text-primary);
     font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    text-align: center;
-    word-break: keep-all;
+    line-height: 1.5;
+    resize: none;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+
+    &:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.15), inset 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.7;
+    }
 `;
 
-const ArrowIcon = styled.span`
-    display: none; // Hide arrow icon in grid layout
+const SubmitButton = styled(motion.button)`
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: var(--primary);
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+
+    &:disabled {
+        background: #555;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.5;
+    }
 `;
 
 const MascotView = styled(motion.div)`

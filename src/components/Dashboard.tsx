@@ -14,26 +14,17 @@ export default function Dashboard() {
   const [isAIAnalysisLoading, setIsAIAnalysisLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isRecommendationsActive, setIsRecommendationsActive] = useState(false);
-  const [preferences, setPreferences] = useState({ category: '', priority: '' });
+  const [recommendationResult, setRecommendationResult] = useState<any>(null);
 
-  const handleAIComplete = () => {
-    setIsAIAnalysisLoading(true);
-    setTimeout(() => {
-      setIsAIAnalysisLoading(false);
-      setIsRecommendationsActive(true);
-    }, 2000);
-  };
-
-  const handleRecommendationComplete = (pref: any) => {
-    console.log("User Preferences:", pref);
-    setPreferences(pref);
-    handleAIComplete();
+  const handleRecommendationComplete = (result: any) => {
+    console.log("AI Recommendation Result:", result);
+    setRecommendationResult(result);
+    setIsRecommendationsActive(true);
   };
 
   const handleReset = () => {
     setIsRecommendationsActive(false);
-    setPreferences({ category: '', priority: '' });
-    // TODO: Reset sorting logic here
+    setRecommendationResult(null);
   };
 
   return (
@@ -42,8 +33,7 @@ export default function Dashboard() {
 
       {isRecommendationsActive ? (
         <RecommendationContainer
-          preferences={preferences}
-          isLoading={isAIAnalysisLoading}
+          result={recommendationResult}
         />
       ) : (
         <>

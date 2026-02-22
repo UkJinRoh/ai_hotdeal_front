@@ -4,111 +4,37 @@ import { getOverallTop10, getCategoryTop10 } from '@/app/actions';
 import TotalCard from './TotalCard';
 import SkeletonCard from './SkeletonCard';
 import { getPriceInfo } from '@/utils/format';
+import AIPipelineModal from './AIPipelineModal';
 
 interface RecommendationContainerProps {
-    preferences: {
-        category: string;
-        priority: string;
-    };
-    isLoading: boolean;
+    result: {
+        data: any[];
+        aiData: {
+            target_categories: string[];
+            search_keywords: string[];
+            ai_comment: string;
+        }
+    } | null;
 }
 
-export default function RecommendationContainer({ preferences, isLoading }: RecommendationContainerProps) {
-    const [items, setItems] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function RecommendationContainer({ result }: RecommendationContainerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        if (isLoading) return;
+        if (result && containerRef.current) {
+            containerRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [result]);
 
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // Fetch data based on category (optimization)
-                let rawItems = [];
-                if (preferences.category && preferences.category !== 'all') {
-                    // Map frontend category values to backend expected values if needed
-                    // 'digital', 'food', 'living', 'fashion'
-                    // Backend might expect capitalized or specific strings. 
-                    // getCategoryTop10 takes a string. 
-                    // Let's assume the values map directly or we need a mapper.
-                    // Based on CategoryContainer, it passes 'Food', 'Drink' etc.
-                    // Let's map 'digital' -> 'Office' (closest?), 'food' -> 'Food', 'living' -> 'Toiletries'?
-                    // Actually, let's just fetch ALL top 10 from categories or getOverallTop10 if specific fetch fails/is complex.
-                    // Better strategy: Fetch getOverallTop10 AND getCategoryTop10 for the specific category to ensure we have enough data.
-
-                    // Mapping based on previous code:
-                    const categoryMap: { [key: string]: string } = {
-                        'digital': 'Office', // Assumption based on "Digital/Office" label
-                        'food': 'Food',
-                        'living': 'Toiletries', // Assumption: Living ~ Toiletries/Others
-                        'fashion': 'Others'
-                    };
-
-                    const targetCategory = categoryMap[preferences.category] || 'Others';
-                    // Strict filtering: ONLY fetch category items
-                    rawItems = await getCategoryTop10(targetCategory);
-                } else {
-                    rawItems = await getOverallTop10();
-                }
-
-                // 1. Filter by Category (Software filtering ensures strictness)
-                // If the user selected a category, we strictly emphasize it, 
-                // but maybe allow some general hotdeals if they match the vibe? 
-                // Strict filtering is safer for "Recommendation".
-                // However, "digital" mapping to "Office" might be too narrow. 
-                // Let's filter loosely or just rely on the sort.
-                // Let's just use the fetched items and sort them heavily.
-
-                let processedItems = rawItems.map(item => {
-                    const { price: displayPrice, originalPrice } = getPriceInfo(item.price, item.title);
-                    // Calculate discount rate if not present
-                    let discountRate = 0;
-                    if (originalPrice && displayPrice < originalPrice) {
-                        discountRate = Math.round(((originalPrice - displayPrice) / originalPrice) * 100);
-                    }
-                    return { ...item, discountRate, displayPrice };
-                });
-
-                // 2. Sort by Priority
-                if (preferences.priority === 'discount') {
-                    processedItems.sort((a, b) => b.discountRate - a.discountRate);
-                } else if (preferences.priority === 'rating') {
-                    // Rating = star rating (if available) or votes
-                    processedItems.sort((a, b) => (b.votes || 0) - (a.votes || 0));
-                } else if (preferences.priority === 'reaction') {
-                    // Reaction = comment_count + votes
-                    processedItems.sort((a, b) => ((b.comment_count || 0) + (b.votes || 0)) - ((a.comment_count || 0) + (a.votes || 0)));
-                }
-
-                // Apply custom sorting (2-1-3) for display if we have enough items
-                // We don't change the underlying array sort, just how we slice/display?
-                // Actually, let's keep the sorted list as is for "others" but rearrange the top 3 visually.
-                // Wait, if we change the array order here, "others" slice might be weird.
-                // It's safer to reorder just the top 3 AFTER slicing.
-
-                setItems(processedItems);
-
-                // Auto-scroll to top
-                if (containerRef.current) {
-                    containerRef.current.scrollIntoView({ behavior: 'smooth' });
-                }
-
-            } catch (error) {
-                console.error("Failed to fetch recommendations", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [preferences, isLoading]);
-
-    if (isLoading || loading) {
+    if (!result) {
         return (
             <Container>
                 <Header>
-                    <Title>✨ AI 맞춤 추천 결과</Title>
+                    <TitleWrapper>
+                        <Title>✨ AI 맞춤 추천 결과</Title>
+                        <TooltipIcon onClick={() => setIsModalOpen(true)} aria-label="추천 방식 보기">❔</TooltipIcon>
+                    </TitleWrapper>
                     <Subtitle>당신의 취향을 분석하여 최적의 상품을 찾고 있습니다...</Subtitle>
                 </Header>
                 <Grid>
@@ -118,8 +44,49 @@ export default function RecommendationContainer({ preferences, isLoading }: Reco
         );
     }
 
-    const top3 = items.slice(0, 3);
-    const others = items.slice(3);
+    const { data: items, aiData } = result;
+
+    // Apply format for price/discount display
+    const processedItems = items.map(item => {
+        const { price: displayPrice, originalPrice } = getPriceInfo(item.price, item.title);
+        let discountRate = 0;
+        if (originalPrice && displayPrice < originalPrice) {
+            discountRate = Math.round(((originalPrice - displayPrice) / originalPrice) * 100);
+        }
+        return { ...item, discountRate, displayPrice };
+    });
+
+    const top3 = processedItems.slice(0, 3);
+    const others = processedItems.slice(3);
+
+    if (processedItems.length === 0) {
+        return (
+            <Container ref={containerRef}>
+                <Header>
+                    <TitleWrapper>
+                        <Title>✨ AI 맞춤 추천 결과</Title>
+                        <TooltipIcon onClick={() => setIsModalOpen(true)} aria-label="추천 방식 보기">❔</TooltipIcon>
+                    </TitleWrapper>
+                    <AICommentBox>
+                        <Subtitle>🤖 <strong>{aiData.ai_comment}</strong></Subtitle>
+                        <KeywordsContainer>
+                            {aiData.search_keywords?.map(kw => (
+                                <KeywordBadge key={kw}>#{kw}</KeywordBadge>
+                            ))}
+                        </KeywordsContainer>
+                        <DisclaimerText>
+                            ※ AI 기반의 추천이므로 실제 찾으시는 조건과 100% 일치하지 않을 수 있습니다.
+                        </DisclaimerText>
+                    </AICommentBox>
+                </Header>
+                <EmptyState>
+                    <EmptyIcon>🔍</EmptyIcon>
+                    <EmptyTitle>아쉽게도 딱 맞는 핫딜을 찾지 못했어요</EmptyTitle>
+                    <EmptyDesc>너무 구체적인 단어보다는, 조금 더 포괄적이거나 다른 상품명으로 다시 한번 물어봐주세요!</EmptyDesc>
+                </EmptyState>
+            </Container>
+        );
+    }
 
     // Reorder Top 3: [2nd, 1st, 3rd] -> indices [1, 0, 2]
     // If < 3 items, we just show what we have. 
@@ -141,15 +108,21 @@ export default function RecommendationContainer({ preferences, isLoading }: Reco
     return (
         <Container ref={containerRef}>
             <Header>
-                <Title>✨ AI 맞춤 추천 결과</Title>
-                <Subtitle>
-                    <strong>{preferences.category === 'digital' ? '디지털/오피스' :
-                        preferences.category === 'food' ? '식품/음료' :
-                            preferences.category === 'living' ? '생활용품' : '패션/뷰티'}</strong> 카테고리에서
-                    <strong> {preferences.priority === 'discount' ? '압도적인 가격 할인' :
-                        preferences.priority === 'rating' ? '높은 사용자 평점' : '많은 사용자 호응'}</strong>
-                    순으로 엄선했습니다.
-                </Subtitle>
+                <TitleWrapper>
+                    <Title>✨ AI 맞춤 추천 결과</Title>
+                    <TooltipIcon onClick={() => setIsModalOpen(true)} aria-label="추천 방식 보기">❔</TooltipIcon>
+                </TitleWrapper>
+                <AICommentBox>
+                    <Subtitle>🤖 <strong>{aiData.ai_comment}</strong></Subtitle>
+                    <KeywordsContainer>
+                        {aiData.search_keywords?.map(kw => (
+                            <KeywordBadge key={kw}>#{kw}</KeywordBadge>
+                        ))}
+                    </KeywordsContainer>
+                    <DisclaimerText>
+                        ※ AI 기반의 추천이므로 실제 찾으시는 조건과 100% 일치하지 않을 수 있습니다.
+                    </DisclaimerText>
+                </AICommentBox>
             </Header>
 
             <BestSection>
@@ -188,6 +161,8 @@ export default function RecommendationContainer({ preferences, isLoading }: Reco
                     <TotalCard key={item.id} item={item} />
                 ))}
             </Grid>
+
+            <AIPipelineModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </Container>
     );
 }
@@ -211,24 +186,90 @@ const Header = styled.div`
     margin-bottom: 20px;
 `;
 
+const TitleWrapper = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+`;
+
 const Title = styled.h2`
     font-size: 32px;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin: 0;
     background: linear-gradient(90deg, var(--text-primary), var(--primary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 `;
 
-const Subtitle = styled.p`
-    font-size: 16px;
+const TooltipIcon = styled.button`
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(0, 200, 83, 0.1);
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0, 200, 83, 0.3);
+    }
+`;
+
+const Subtitle = styled.p`
+    font-size: 18px;
+    color: var(--text-primary);
     line-height: 1.6;
+    margin-bottom: 12px;
     
     strong {
         color: var(--primary);
-        font-weight: 600;
+        font-weight: 700;
     }
+`;
+
+const AICommentBox = styled.div`
+    background: rgba(0, 200, 83, 0.05);
+    border: 1px solid rgba(0, 200, 83, 0.2);
+    border-radius: 20px;
+    padding: 24px;
+    margin: 0 auto;
+    max-width: 800px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+`;
+
+const KeywordsContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+`;
+
+const KeywordBadge = styled.span`
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 4px 12px;
+    border-radius: 12px;
+`;
+
+const DisclaimerText = styled.div`
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    opacity: 0.8;
 `;
 
 const BestSection = styled.div`
@@ -305,4 +346,38 @@ const Grid = styled.div`
     @media (min-width: 1440px) {
         grid-template-columns: repeat(4, 1fr);
     }
+`;
+
+const EmptyState = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    text-align: center;
+    margin-top: 20px;
+`;
+
+const EmptyIcon = styled.div`
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+`;
+
+const EmptyTitle = styled.h3`
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+`;
+
+const EmptyDesc = styled.p`
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 400px;
 `;

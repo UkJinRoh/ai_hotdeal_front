@@ -18,7 +18,6 @@ export const Main = styled.main`
   width: 100%;
   flex-direction: column;
   align-items: flex-start;
-  background-color: var(--background);
   padding-top: 120px;
   padding-bottom: 120px;
   transition: background-color 0.3s ease;
@@ -35,8 +34,14 @@ export const Title = styled.h1`
 export const HeaderContainer = styled.div`
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    width: 100%;
     margin-bottom: 20px;
+`;
+
+export const LogoTitleGroup = styled.div`
+    display: flex;
+    align-items: center;
 `;
 
 export const LogoWrapper = styled.div`
