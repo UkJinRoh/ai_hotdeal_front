@@ -12,6 +12,7 @@ interface RecommendationContainerProps {
         aiData: {
             target_categories: string[];
             search_keywords: string[];
+            related_keywords?: string[];
             ai_comment: string;
         }
     } | null;
@@ -70,8 +71,8 @@ export default function RecommendationContainer({ result }: RecommendationContai
                     <AICommentBox>
                         <Subtitle>🤖 <strong>{aiData.ai_comment}</strong></Subtitle>
                         <KeywordsContainer>
-                            {aiData.search_keywords?.map(kw => (
-                                <KeywordBadge key={kw}>#{kw}</KeywordBadge>
+                            {[...(aiData.search_keywords || []), ...(aiData.related_keywords || [])].map((kw, idx) => (
+                                <KeywordBadge key={`${kw}-${idx}`}>#{kw}</KeywordBadge>
                             ))}
                         </KeywordsContainer>
                         <DisclaimerText>
@@ -82,7 +83,10 @@ export default function RecommendationContainer({ result }: RecommendationContai
                 <EmptyState>
                     <EmptyIcon>🔍</EmptyIcon>
                     <EmptyTitle>아쉽게도 딱 맞는 핫딜을 찾지 못했어요</EmptyTitle>
-                    <EmptyDesc>너무 구체적인 단어보다는, 조금 더 포괄적이거나 다른 상품명으로 다시 한번 물어봐주세요!</EmptyDesc>
+                    <EmptyDesc>
+                        핫딜 특성상 찾으시는 상품의 할인이 종료되었거나 현재 재고가 없을 수 있습니다. <br />
+                        조금 더 포괄적인 단어나 다른 비슷한 상품명으로 지침을 주시면 다시 한번 열심히 찾아볼게요!
+                    </EmptyDesc>
                 </EmptyState>
             </Container>
         );
@@ -115,8 +119,8 @@ export default function RecommendationContainer({ result }: RecommendationContai
                 <AICommentBox>
                     <Subtitle>🤖 <strong>{aiData.ai_comment}</strong></Subtitle>
                     <KeywordsContainer>
-                        {aiData.search_keywords?.map(kw => (
-                            <KeywordBadge key={kw}>#{kw}</KeywordBadge>
+                        {[...(aiData.search_keywords || []), ...(aiData.related_keywords || [])].map((kw, idx) => (
+                            <KeywordBadge key={`${kw}-${idx}`}>#{kw}</KeywordBadge>
                         ))}
                     </KeywordsContainer>
                     <DisclaimerText>

@@ -200,25 +200,55 @@ export async function getRecommendationFromPrompt(prompt: string) {
                     items: {
                         type: Type.STRING,
                     },
-                    description: "유저 질문에서 추출한 핵심 상품 검색 키워드 배열 (단, '음료 아무거나'처럼 포괄적이면 빈 배열 []. 만약 '집들이 선물', '캠핑용품' 등 특정 '상황'이 주어지면, 해당 상황에 흔히 쓰이는 구체적인 상품명 명사 3~5개(예: 집들이 -> '휴지', '세제', '햇반', '커피', '스팸' / 캠핑 -> '텐트', '의자', '고기', '버너')로 치환하여 추출할 것. 반드시 구체적인 명사여야 함)",
+                    description: "유저 질문에서 추출한 대표 상품명 명사 2~3개 (예: '다이어트' -> '다이어트', '캠핑' -> '캠핑용품'). 포괄적이면 빈 배열 []",
+                },
+                related_keywords: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.STRING,
+                    },
+                    description: "유저 질문의 의미를 폭넓게 확장한 구체적 명사 최대 20개 (예: '다이어트' -> '닭가슴살', '고구마', '제로콜라', '오트밀' / '캠핑' -> '텐트', '의자', '코펠', '라면', '소시지', '맥주', '물티슈', '햇반', '생수'). 중요: 텐트나 버너 같은 '특화 장비/상품명' 뿐만 아니라, 상황에 맞게 소비될 수 있는 초-광역 일상재(라면, 맥주, 삼겹살, 과자, 커피 등)까지 한계 없이 최대한 넓고 다양하게 포괄해서 뽑을 것.",
                 },
                 ai_comment: {
                     type: Type.STRING,
                     description: "유저의 상황에 공감하며 추천 이유를 설명하는 다정한 1줄 코멘트 (이모지 포함)",
                 },
             },
-            required: ["target_categories", "search_keywords", "ai_comment"],
+            required: ["target_categories", "search_keywords", "related_keywords", "ai_comment"],
         };
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: "너는 핫딜 추천 비서야. 사용자의 상황을 분석해서 1) 찾을 카테고리(Office, Food, Drink, Toiletries, Others 중), 2) DB 매칭을 위한 구체적 명사 키워드(포괄적인 요청이면 빈 배열 [] 반환. 단, '집들이', '캠핑' 같은 상황적 키워드가 들어오면 핫딜 게시판에 자주 올라오는 생필품/식품 명사(예: 세제, 휴지, 스팸, 생수 등)로 치환해 3~5개 추출할 것), 3) 유저에게 건넬 1줄 친근한 상황 공감 멘트를 JSON 포맷으로 반환해.",
-                responseMimeType: "application/json",
-                responseSchema: responseSchema,
+        const systemInstruction = "너는 핫딜 추천 비서야. 사용자의 상황을 분석해서 1) 찾을 카테고리(Office, Food, Drink, Toiletries, Others 중), 2) DB 매칭을 위한 대표 상품명 구체적 명사 키워드 2~3개 (포괄적이면 []), 3) 의미를 폭넓게 확장할 수 있는 연관 세부 품목 구체적 명사 키워드(특화된 장비/고유명사 뿐만 아니라, 해당 상황에서 소비될 수 있는 라면, 소시지, 맥주, 물티슈, 생수 같은 초광역 일상재까지 한계 없이 폭넓게) 최대 20개, 4) 상황 공감 1줄 코멘트를 JSON 포맷으로 반환해.";
+
+        let response;
+        try {
+            response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    systemInstruction: systemInstruction,
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
+            });
+        } catch (apiError: any) {
+            console.warn(`[actions] Gemini API Error with gemini-2.5-flash:`, apiError?.message || apiError);
+
+            // 429 Too Many Requests, Resource Exhausted, Quota Exceeded 등의 에러 발생 시
+            if (apiError?.status === 429 || apiError?.message?.includes('429') || apiError?.message?.toLowerCase().includes('quota') || apiError?.message?.toLowerCase().includes('exhausted')) {
+                console.log(`[actions] Rate limit reached. Falling back to gemini-2.5-flash-lite...`);
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash-lite',
+                    contents: prompt,
+                    config: {
+                        systemInstruction: systemInstruction,
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema,
+                    }
+                });
+            } else {
+                throw apiError; // 다른 에러는 그대로 던짐
             }
-        });
+        }
 
         const textResponse = response.text;
         if (!textResponse) throw new Error("Empty response from AI");
@@ -226,7 +256,7 @@ export async function getRecommendationFromPrompt(prompt: string) {
         const aiData = JSON.parse(textResponse);
         console.log(`[actions] Gemini Response:`, aiData);
 
-        const { target_categories, search_keywords, ai_comment } = aiData;
+        const { target_categories, search_keywords, related_keywords, ai_comment } = aiData;
 
         // DB (Supabase) 교차 검색
         let query = supabase
@@ -234,14 +264,20 @@ export async function getRecommendationFromPrompt(prompt: string) {
             .select('*')
             .lt('report_count', 2);
 
-        // 카테고리 매칭 필터
-        if (target_categories && target_categories.length > 0) {
-            query = query.in('category', target_categories.flatMap((cat: string) => [cat, `Category.${cat.toUpperCase()}`]));
+        // 카테고리 매칭 필터 (Drink가 포함되었을 때 Food도 강제로 포함시켜 핫딜 게시판 분류 오류 방어)
+        let finalCategories = target_categories || [];
+        if (finalCategories.includes('Drink') && !finalCategories.includes('Food')) {
+            finalCategories.push('Food');
         }
 
-        // 키워드 OR 조건 검색 (우선 ilike로 title 필터)
-        if (search_keywords && search_keywords.length > 0) {
-            const orQuery = search_keywords.map((kw: string) => `title.ilike.%${kw}%`).join(',');
+        if (finalCategories.length > 0) {
+            query = query.in('category', finalCategories.flatMap((cat: string) => [cat, `Category.${cat.toUpperCase()}`]));
+        }
+
+        // 키워드 OR 조건 검색 (title 확장)
+        const all_keywords = [...(search_keywords || []), ...(related_keywords || [])];
+        if (all_keywords && all_keywords.length > 0) {
+            const orQuery = all_keywords.map((kw: string) => `title.ilike.%${kw}%`).join(',');
             query = query.or(orQuery);
         }
 
@@ -263,7 +299,7 @@ export async function getRecommendationFromPrompt(prompt: string) {
         return {
             success: true,
             data: filteredData.slice(0, 20),
-            aiData: { target_categories, search_keywords, ai_comment }
+            aiData: { target_categories, search_keywords, related_keywords, ai_comment }
         };
 
     } catch (e: any) {

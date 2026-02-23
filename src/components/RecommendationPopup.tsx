@@ -183,7 +183,7 @@ export default function RecommendationPopup({ isOpen, onClose, onComplete }: Rec
                             <InputWrapper>
                                 <SearchTextarea
                                     ref={textareaRef}
-                                    placeholder="예) 이번 주말 캠핑 갈 건데 가성비 먹거리 추천해줘"
+                                    placeholder="예) 이번 주말에 캠핑 갈 건데 가성비 좋은 먹거리 추천해줘."
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
                                     onKeyDown={handleKeyDown}
@@ -287,7 +287,7 @@ const SearchTextarea = styled.textarea`
     border-radius: 16px;
     padding: 20px;
     color: var(--text-primary);
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.5;
     resize: none;
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
